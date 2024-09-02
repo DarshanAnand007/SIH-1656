@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_inappwebview: ^6.0.0
+  flutter_widget_from_html: ^0.15.2
   lottie: ^3.1.2
   webview_flutter: ^4.9.0
 
@@ -21,4 +23,5 @@ flutter:
   uses-material-design: true
   assets:
     - lib/assets/beach.jpg
+    - lib/assets/beach_suitability_map.html
     
