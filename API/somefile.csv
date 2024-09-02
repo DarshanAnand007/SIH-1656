@@ -1,0 +1,23 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<HTML>
+<HEAD>
+	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=iso-8859-1">
+	<TITLE>The Page you,re looking for is not here.</TITLE>
+<style>
+		* { margin: 0; padding: 0; }
+		html { 
+			background: url(https://incois.gov.in/portal/images/error.jpg)  no-repeat center center fixed; 
+			-webkit-background-size: cover;
+			-moz-background-size: cover;
+			-o-background-size: cover;
+			background-size: cover;
+		}
+		
+</style>
+
+</HEAD>
+
+<BODY>
+<div class="html"><a href="/portal/index.jsp"><img src="https://incois.gov.in/portal/images/blank.png" width="100%" height="100%"/></a></div>
+</BODY>
+</HTML>

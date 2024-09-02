@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    
+        <script>
+            L_NO_TOUCH = false;
+            L_DISABLE_3D = false;
+        </script>
+    
+    <style>html, body {width: 100%;height: 100%;margin: 0;padding: 0;}</style>
+    <style>#map {position:absolute;top:0;bottom:0;right:0;left:0;}</style>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_4b8233cbfad3311556294be15a2e7a2d {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+        
+</head>
+<body>
+    
+    
+            <div class="folium-map" id="map_4b8233cbfad3311556294be15a2e7a2d" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_4b8233cbfad3311556294be15a2e7a2d = L.map(
+                "map_4b8233cbfad3311556294be15a2e7a2d",
+                {
+                    center: [20.5937, 78.9629],
+                    crs: L.CRS.EPSG3857,
+                    zoom: 5,
+                    zoomControl: true,
+                    preferCanvas: false,
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_e514c0522572de45c56feaf0a3d1639a = L.tileLayer(
+                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {"attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors", "detectRetina": false, "maxNativeZoom": 19, "maxZoom": 19, "minZoom": 0, "noWrap": false, "opacity": 1, "subdomains": "abc", "tms": false}
+            );
+        
+    
+            tile_layer_e514c0522572de45c56feaf0a3d1639a.addTo(map_4b8233cbfad3311556294be15a2e7a2d);
+        
+    
+            var marker_b26463a720ca4f48d7a241aea898d59b = L.marker(
+                [13.0475, 80.282],
+                {}
+            ).addTo(map_4b8233cbfad3311556294be15a2e7a2d);
+        
+    
+            var icon_fd58bc808ffeb4f15dedb637fa2f3a18 = L.AwesomeMarkers.icon(
+                {"extraClasses": "fa-rotate-0", "icon": "info-sign", "iconColor": "white", "markerColor": "green", "prefix": "glyphicon"}
+            );
+            marker_b26463a720ca4f48d7a241aea898d59b.setIcon(icon_fd58bc808ffeb4f15dedb637fa2f3a18);
+        
+    
+        var popup_d0839cfd8855475d40364b35ee88199a = L.popup({"maxWidth": 200});
+
+        
+            
+                var html_8eab19af79999961c8986a3521a52ec1 = $(`<div id="html_8eab19af79999961c8986a3521a52ec1" style="width: 100.0%; height: 100.0%;"><b>Marina Beach</b><br>Wave Height: 1.5 m<br>Suitability: Suitable</div>`)[0];
+                popup_d0839cfd8855475d40364b35ee88199a.setContent(html_8eab19af79999961c8986a3521a52ec1);
+            
+        
+
+        marker_b26463a720ca4f48d7a241aea898d59b.bindPopup(popup_d0839cfd8855475d40364b35ee88199a)
+        ;
+
+        
+    
+    
+            var marker_4d5615e4530728e7fca9f560935d8ff8 = L.marker(
+                [19.0968, 72.8265],
+                {}
+            ).addTo(map_4b8233cbfad3311556294be15a2e7a2d);
+        
+    
+            var icon_5ada894ab6f9cfe85a4a6a95d3e4a4ef = L.AwesomeMarkers.icon(
+                {"extraClasses": "fa-rotate-0", "icon": "info-sign", "iconColor": "white", "markerColor": "red", "prefix": "glyphicon"}
+            );
+            marker_4d5615e4530728e7fca9f560935d8ff8.setIcon(icon_5ada894ab6f9cfe85a4a6a95d3e4a4ef);
+        
+    
+        var popup_a15dd9de9c472ef927c399b1d29b9e05 = L.popup({"maxWidth": 200});
+
+        
+            
+                var html_9978ad01603448c84e3a5d1e219cbb15 = $(`<div id="html_9978ad01603448c84e3a5d1e219cbb15" style="width: 100.0%; height: 100.0%;"><b>Juhu Beach</b><br>Wave Height: 2.3 m<br>Suitability: Not Suitable</div>`)[0];
+                popup_a15dd9de9c472ef927c399b1d29b9e05.setContent(html_9978ad01603448c84e3a5d1e219cbb15);
+            
+        
+
+        marker_4d5615e4530728e7fca9f560935d8ff8.bindPopup(popup_a15dd9de9c472ef927c399b1d29b9e05)
+        ;
+
+        
+    
+    
+            var marker_d4763b77c92a9732ecf6263aebdc84b6 = L.marker(
+                [8.4006, 76.9781],
+                {}
+            ).addTo(map_4b8233cbfad3311556294be15a2e7a2d);
+        
+    
+            var icon_c425bf86f7c3ea07715e034f5214dd46 = L.AwesomeMarkers.icon(
+                {"extraClasses": "fa-rotate-0", "icon": "info-sign", "iconColor": "white", "markerColor": "green", "prefix": "glyphicon"}
+            );
+            marker_d4763b77c92a9732ecf6263aebdc84b6.setIcon(icon_c425bf86f7c3ea07715e034f5214dd46);
+        
+    
+        var popup_0042797863d56e8e9585ed5fcc95b045 = L.popup({"maxWidth": 200});
+
+        
+            
+                var html_7ac29c7b4a92cf9e261fbc30aa4b4f19 = $(`<div id="html_7ac29c7b4a92cf9e261fbc30aa4b4f19" style="width: 100.0%; height: 100.0%;"><b>Kovalam Beach</b><br>Wave Height: 0.8 m<br>Suitability: Suitable</div>`)[0];
+                popup_0042797863d56e8e9585ed5fcc95b045.setContent(html_7ac29c7b4a92cf9e261fbc30aa4b4f19);
+            
+        
+
+        marker_d4763b77c92a9732ecf6263aebdc84b6.bindPopup(popup_0042797863d56e8e9585ed5fcc95b045)
+        ;
+
+        
+    
+    
+            var marker_e76cf32022857751f470c2dee38ecd0c = L.marker(
+                [15.5569, 73.7437],
+                {}
+            ).addTo(map_4b8233cbfad3311556294be15a2e7a2d);
+        
+    
+            var icon_11189d82a82fe17b3b2d6cfcd03f0350 = L.AwesomeMarkers.icon(
+                {"extraClasses": "fa-rotate-0", "icon": "info-sign", "iconColor": "white", "markerColor": "green", "prefix": "glyphicon"}
+            );
+            marker_e76cf32022857751f470c2dee38ecd0c.setIcon(icon_11189d82a82fe17b3b2d6cfcd03f0350);
+        
+    
+        var popup_1a72d635991ebd377e11085d40d6a913 = L.popup({"maxWidth": 200});
+
+        
+            
+                var html_e11749000b3bc4283dd2821c2b343865 = $(`<div id="html_e11749000b3bc4283dd2821c2b343865" style="width: 100.0%; height: 100.0%;"><b>Baga Beach</b><br>Wave Height: 2.0 m<br>Suitability: Suitable</div>`)[0];
+                popup_1a72d635991ebd377e11085d40d6a913.setContent(html_e11749000b3bc4283dd2821c2b343865);
+            
+        
+
+        marker_e76cf32022857751f470c2dee38ecd0c.bindPopup(popup_1a72d635991ebd377e11085d40d6a913)
+        ;
+
+        
+    
+    
+            var marker_642f97bb7dda94cea1d289891666b35b = L.marker(
+                [11.9796, 92.9876],
+                {}
+            ).addTo(map_4b8233cbfad3311556294be15a2e7a2d);
+        
+    
+            var icon_b979d4e54632c32ae6d85deecdbff32d = L.AwesomeMarkers.icon(
+                {"extraClasses": "fa-rotate-0", "icon": "info-sign", "iconColor": "white", "markerColor": "green", "prefix": "glyphicon"}
+            );
+            marker_642f97bb7dda94cea1d289891666b35b.setIcon(icon_b979d4e54632c32ae6d85deecdbff32d);
+        
+    
+        var popup_e79f5414c6ed146d8501fcc3853d953d = L.popup({"maxWidth": 200});
+
+        
+            
+                var html_fb4a921f925c51876dbd1c9205dd253e = $(`<div id="html_fb4a921f925c51876dbd1c9205dd253e" style="width: 100.0%; height: 100.0%;"><b>Radhanagar Beach</b><br>Wave Height: 1.2 m<br>Suitability: Suitable</div>`)[0];
+                popup_e79f5414c6ed146d8501fcc3853d953d.setContent(html_fb4a921f925c51876dbd1c9205dd253e);
+            
+        
+
+        marker_642f97bb7dda94cea1d289891666b35b.bindPopup(popup_e79f5414c6ed146d8501fcc3853d953d)
+        ;
+
+        
+    
+</script>
+</html>
