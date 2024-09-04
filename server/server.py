@@ -1,3 +1,4 @@
+import logging
 from flask import Flask, jsonify, request
 import openmeteo_requests
 import requests_cache
@@ -6,6 +7,9 @@ from retry_requests import retry
 
 app = Flask(__name__)
 
+# Setup logging to print errors to the console
+logging.basicConfig(level=logging.DEBUG)
+
 # Setup the Open-Meteo API client with cache and retry on error
 cache_session = requests_cache.CachedSession('.cache', expire_after=3600)
 retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
@@ -13,7 +17,6 @@ openmeteo = openmeteo_requests.Client(session=retry_session)
 
 @app.route('/weather', methods=['GET'])
 def get_weather():
-    # Update coordinates for Visakhapatnam Beach
     url = "https://marine-api.open-meteo.com/v1/marine"
     params = {
         "latitude": 17.6868,  # Latitude for Visakhapatnam Beach
@@ -30,35 +33,41 @@ def get_weather():
         
         # Process hourly data
         hourly = response.Hourly()
-        hourly_wave_height = hourly.Variables(0).ValuesAsNumpy()
-        hourly_wave_direction = hourly.Variables(1).ValuesAsNumpy()
-        hourly_wind_wave_height = hourly.Variables(2).ValuesAsNumpy()
-        hourly_wind_wave_direction = hourly.Variables(3).ValuesAsNumpy()
-        hourly_swell_wave_height = hourly.Variables(4).ValuesAsNumpy()
-        hourly_swell_wave_direction = hourly.Variables(5).ValuesAsNumpy()
-        hourly_ocean_current_velocity = hourly.Variables(6).ValuesAsNumpy()
-        hourly_ocean_current_direction = hourly.Variables(7).ValuesAsNumpy()
+        hourly_wave_height = hourly.Variables(0).ValuesAsNumpy().astype(float)
+        hourly_wave_direction = hourly.Variables(1).ValuesAsNumpy().astype(float)
+        hourly_wind_wave_height = hourly.Variables(2).ValuesAsNumpy().astype(float)
+        hourly_wind_wave_direction = hourly.Variables(3).ValuesAsNumpy().astype(float)
+        hourly_swell_wave_height = hourly.Variables(4).ValuesAsNumpy().astype(float)
+        hourly_swell_wave_direction = hourly.Variables(5).ValuesAsNumpy().astype(float)
+        hourly_ocean_current_velocity = hourly.Variables(6).ValuesAsNumpy().astype(float)
+        hourly_ocean_current_direction = hourly.Variables(7).ValuesAsNumpy().astype(float)
         
         # Convert the UTC timestamps to the desired timezone (e.g., Asia/Kolkata for Visakhapatnam)
         utc_times = pd.to_datetime(hourly.Time(), unit="s", utc=True)
         local_times = utc_times.tz_convert('Asia/Kolkata')
         
+        # Ensure local_times is iterable
+        if isinstance(local_times, pd.Timestamp):
+            latest_time = local_times
+        else:
+            latest_time = local_times[-1]
+        
         # Get the latest entry by selecting the last row
         latest_entry = {
-            "date": local_times[-1].strftime('%Y-%m-%d %H:%M:%S'),
-            "wave_height": hourly_wave_height[-1],
-            "wave_direction": hourly_wave_direction[-1],
-            "wind_wave_height": hourly_wind_wave_height[-1],
-            "wind_wave_direction": hourly_wind_wave_direction[-1],
-            "swell_wave_height": hourly_swell_wave_height[-1],
-            "swell_wave_direction": hourly_swell_wave_direction[-1],
-            "ocean_current_velocity": hourly_ocean_current_velocity[-1],
-            "ocean_current_direction": hourly_ocean_current_direction[-1]
+            "date": latest_time.strftime('%Y-%m-%d %H:%M:%S'),
+            "wave_height": float(hourly_wave_height[-1]),
+            "wave_direction": float(hourly_wave_direction[-1]),
+            "wind_wave_height": float(hourly_wind_wave_height[-1]),
+            "wind_wave_direction": float(hourly_wind_wave_direction[-1]),
+            "swell_wave_height": float(hourly_swell_wave_height[-1]),
+            "swell_wave_direction": float(hourly_swell_wave_direction[-1]),
+            "ocean_current_velocity": float(hourly_ocean_current_velocity[-1]),
+            "ocean_current_direction": float(hourly_ocean_current_direction[-1])
         }
         
         # Create the final response
         response_data = {
-            "location/beach": {
+            "vishakapatnam": {
                 "lat": response.Latitude(),
                 "long": response.Longitude(),
                 "wave_height": latest_entry["wave_height"],
@@ -75,6 +84,7 @@ def get_weather():
         return jsonify(response_data)
 
     except Exception as e:
+        logging.error(f"Error occurred: {e}")
         return jsonify({"error": str(e)}), 500
 
 
