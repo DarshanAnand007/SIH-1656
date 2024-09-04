@@ -57,6 +57,9 @@ hourly_data = {
 
 hourly_dataframe = pd.DataFrame(data=hourly_data)
 
-# Add the title as part of the DataFrame output
-print("\nWeather Data for Visakhapatnam Beach:")
-print(hourly_dataframe)
+# Get the latest entry by selecting the last row
+latest_data = hourly_dataframe.iloc[-1]
+
+# Print the latest data
+print("\nLatest Weather Data for Visakhapatnam Beach:")
+print(latest_data)
