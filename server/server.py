@@ -1,12 +1,11 @@
 import logging
 from flask import Flask, jsonify
 import openmeteo_requests
-import requests_cache
 import pandas as pd
+import requests
 from retry_requests import retry
 import google.generativeai as genai
 import math
-import time
 
 app = Flask(__name__)
 
@@ -14,38 +13,15 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
 # Configure the Google Generative AI (Gemini) API
-genai.configure(api_key="AIzaSyAH3n20fCa83Mjn00QB22dOdrqnTuDY-Ck")
+genai.configure(api_key="AIzaSyDq5tdo2AL7V_x1zOcBEiNRy6HyQw6sibc")
 
-# Setup the Open-Meteo API client with cache and retry on error
-cache_session = requests_cache.CachedSession('.cache', expire_after=3600)
-retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
+# Setup the Open-Meteo API client without cache
+retry_session = retry(requests.Session(), retries=5, backoff_factor=0.2)
 openmeteo = openmeteo_requests.Client(session=retry_session)
 
 # Function to clean NaN values
 def clean_value(value, default_value=0):
     return default_value if pd.isnull(value) or math.isnan(value) else value
-
-# Function to create the AI prompt, handling missing data
-def create_ai_prompt(location, wave_height, wind_wave_height, ocean_current_velocity):
-    # Handle missing data
-    wave_height_str = f"{wave_height} meters" if wave_height is not None else "Data not available"
-    wind_wave_height_str = f"{wind_wave_height} meters" if wind_wave_height is not None else "Data not available"
-    ocean_current_velocity_str = f"{ocean_current_velocity} m/s" if ocean_current_velocity is not None else "Data not available"
-    
-    # Create a concise prompt for the AI
-    prompt = (
-        f"Assess if the beach at {location} is safe or unsafe based on the weather data provided. "
-        f"Give a safety score between 1 (unsafe) and 10 (safe) and a brief reason for the decision.\n\n"
-        f"Wave height: {wave_height_str}\n"
-        f"Wind wave height: {wind_wave_height_str}\n"
-        f"Ocean current velocity: {ocean_current_velocity_str}\n"
-    )
-    
-    return prompt
-
-# Fallback message when quota is exceeded
-def fallback_safety_message():
-    return "Unable to assess beach safety at this time. Please try again later."
 
 # Function to send weather data to Gemini AI for beach safety assessment
 def send_data_to_gemini(location, latitude, longitude, wave_height, wave_direction, wind_wave_height, 
@@ -53,27 +29,34 @@ def send_data_to_gemini(location, latitude, longitude, wave_height, wave_directi
                         ocean_current_velocity=None, ocean_current_direction=None):
     model = genai.GenerativeModel("gemini-1.5-flash")
     
-    prompt = create_ai_prompt(location, wave_height, wind_wave_height, ocean_current_velocity)
+    # Create a concise prompt for the AI to generate a short response
+    prompt = (
+        f"Assess if the beach at {location} is safe or unsafe based on the weather data provided. "
+        f"Give a safety score between 1 (unsafe) and 10 (safe) and a brief reason for the decision.\n\n"
+        f"Wave height: {wave_height} meters\n"
+        f"Wind wave height: {wind_wave_height} meters\n"
+        f"Ocean current velocity: {ocean_current_velocity} m/s\n"
+    )
 
-    for attempt in range(5):  # Retry up to 5 times
-        try:
-            logging.debug(f"Sending prompt to Gemini AI: {prompt}")
-            response = model.generate_content(prompt)
-            
-            if hasattr(response, 'text') and response.text:
-                logging.debug(f"Received response from Gemini AI: {response.text}")
-                return response.text.strip()
-            else:
-                logging.error("No valid response from AI")
-                return fallback_safety_message()
-        except Exception as e:
-            if "Resource has been exhausted" in str(e):
-                logging.error(f"Quota exceeded, retrying in 30 seconds... (Attempt {attempt+1}/5)")
-                time.sleep(30)  # Wait 30 seconds before retrying
-            else:
-                logging.error(f"Error occurred during Gemini AI response: {e}")
-                return "An error occurred while determining beach safety."
-    return "Quota limit reached. Please try again later."
+    try:
+        logging.debug(f"Sending prompt to Gemini AI: {prompt}")
+        response = model.generate_content(prompt)
+        
+        # Process and return the response
+        if hasattr(response, 'text') and response.text:
+            logging.debug(f"Received response from Gemini AI: {response.text}")
+            return {
+                "safety_message": response.text.strip(),
+                "location": location,
+                "latitude": latitude,
+                "longitude": longitude
+            }
+        else:
+            logging.error("No valid response from AI")
+            return {"error": "No valid response from AI."}
+    except Exception as e:
+        logging.error(f"Error occurred during Gemini AI response: {e}")
+        return {"error": f"An error occurred while determining beach safety: {str(e)}"}
 
 @app.route('/weather', methods=['GET'])
 def get_weather():
@@ -99,9 +82,6 @@ def get_weather():
         responses = openmeteo.weather_api(url, params=params)
         response = responses[0]
         
-        # Print the entire response to inspect the data received from the API
-        logging.debug(f"Weather API response: {response}")
-
         # ---- Process Current Data ----
         current = response.Current()
         latest_current_data = {
@@ -149,9 +129,6 @@ def get_weather():
         # Get the latest entry by selecting the last row
         latest_hourly_data = hourly_dataframe.iloc[-1]
         
-        # Print the latest data to inspect before sending to Gemini
-        logging.debug(f"Latest hourly data: {latest_hourly_data}")
-
         # Get the suitability score from Gemini, including location and coordinates
         suitability_response = send_data_to_gemini(
             "Visakhapatnam", params["latitude"], params["longitude"],
@@ -182,9 +159,7 @@ def get_weather():
                 "ocean_current_velocity": latest_hourly_data["ocean_current_velocity"],
                 "ocean_current_direction": latest_hourly_data["ocean_current_direction"]
             },
-            "suitability": {
-                "safety_message": suitability_response  # AI-generated short suitability response
-            }
+            "suitability": suitability_response  # AI-generated short suitability response
         }
         
         return jsonify(response_data)
