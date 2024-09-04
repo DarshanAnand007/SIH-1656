@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
 import 'dart:math'; // For generating random ratings
 
 class HomePage extends StatefulWidget {
@@ -15,24 +17,39 @@ class _HomePageState extends State<HomePage> {
   GoogleMapController? mapController;
   Set<Marker> _markers = {};
 
-  // Define the points across India with random values
-  List<Map<String, dynamic>> locations = [
-    {"city": "Bangalore", "lat": 12.9716, "lng": 77.5946, "rating": Random().nextInt(10) + 1},
-    {"city": "Delhi", "lat": 28.7041, "lng": 77.1025, "rating": Random().nextInt(10) + 1},
-    {"city": "Mumbai", "lat": 19.0760, "lng": 72.8777, "rating": Random().nextInt(10) + 1},
-    {"city": "Chennai", "lat": 13.0827, "lng": 80.2707, "rating": Random().nextInt(10) + 1},
-    {"city": "Hyderabad", "lat": 17.3850, "lng": 78.4867, "rating": Random().nextInt(10) + 1},
-    {"city": "Kolkata", "lat": 22.5726, "lng": 88.3639, "rating": Random().nextInt(10) + 1},
-    {"city": "Pune", "lat": 18.5204, "lng": 73.8567, "rating": Random().nextInt(10) + 1},
-    {"city": "Ahmedabad", "lat": 23.0225, "lng": 72.5714, "rating": Random().nextInt(10) + 1},
-    {"city": "Jaipur", "lat": 26.9124, "lng": 75.7873, "rating": Random().nextInt(10) + 1},
-    {"city": "Lucknow", "lat": 26.8467, "lng": 80.9462, "rating": Random().nextInt(10) + 1},
-  ];
+  // Initial empty list for locations
+  List<Map<String, dynamic>> locations = [];
 
   @override
   void initState() {
     super.initState();
-    _generateMarkers(); // Generate markers for all locations
+    _fetchLocationData(); // Fetch locations from API
+  }
+
+  Future<void> _fetchLocationData() async {
+    final response = await http.get(Uri.parse('http://192.168.0.106:5001/weather'));
+
+    if (response.statusCode == 200) {
+      final jsonData = json.decode(response.body);
+      final latitude = jsonData['coordinates']['latitude'];
+      final longitude = jsonData['coordinates']['longitude'];
+      final locationName = jsonData['location'];
+      final rating = Random().nextInt(10) + 1; // Generate random rating for now
+
+      setState(() {
+        // Add the fetched location to the list
+        locations.add({
+          "city": locationName,
+          "lat": latitude,
+          "lng": longitude,
+          "rating": rating,
+        });
+        _generateMarkers(); // Generate markers after adding new location
+      });
+    } else {
+      // Handle error response
+      print('Failed to load data from API');
+    }
   }
 
   // Function to generate color based on rating

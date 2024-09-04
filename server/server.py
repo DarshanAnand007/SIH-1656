@@ -5,6 +5,7 @@ import requests_cache
 import pandas as pd
 from retry_requests import retry
 import google.generativeai as genai
+import math
 
 app = Flask(__name__)
 
@@ -19,11 +20,14 @@ cache_session = requests_cache.CachedSession('.cache', expire_after=3600)
 retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
 openmeteo = openmeteo_requests.Client(session=retry_session)
 
+# Function to clean NaN values
+def clean_value(value, default_value=0):
+    return default_value if pd.isnull(value) or math.isnan(value) else value
+
 # Function to send weather data to Gemini AI for beach safety assessment
 def send_data_to_gemini(location, latitude, longitude, wave_height, wave_direction, wind_wave_height, 
-                        wind_wave_direction, wind_wave_period, wind_wave_peak_period, swell_wave_height=None, 
-                        swell_wave_direction=None, swell_wave_period=None, ocean_current_velocity=None, 
-                        ocean_current_direction=None):
+                        wind_wave_direction, swell_wave_height=None, swell_wave_direction=None, 
+                        ocean_current_velocity=None, ocean_current_direction=None):
     model = genai.GenerativeModel("gemini-1.5-pro")
     
     # Create a concise prompt for the AI to generate a short response
@@ -36,12 +40,15 @@ def send_data_to_gemini(location, latitude, longitude, wave_height, wave_directi
     )
 
     try:
+        logging.debug(f"Sending prompt to Gemini AI: {prompt}")
         response = model.generate_content(prompt)
         
         # Process and return the response
         if hasattr(response, 'text') and response.text:
+            logging.debug(f"Received response from Gemini AI: {response.text}")
             return response.text.strip()
         else:
+            logging.error("No valid response from AI")
             return "No valid response from AI."
     except Exception as e:
         logging.error(f"Error occurred during Gemini AI response: {e}")
@@ -74,16 +81,16 @@ def get_weather():
         # ---- Process Current Data ----
         current = response.Current()
         latest_current_data = {
-            "current_wave_height": current.Variables(0).Value(),
-            "current_wave_direction": current.Variables(1).Value(),
-            "current_wave_period": current.Variables(2).Value(),
-            "current_wind_wave_height": current.Variables(3).Value(),
-            "current_wind_wave_direction": current.Variables(4).Value(),
-            "current_wind_wave_period": current.Variables(5).Value(),
-            "current_swell_wave_height": current.Variables(7).Value(),
-            "current_swell_wave_direction": current.Variables(8).Value(),
-            "current_ocean_current_velocity": current.Variables(11).Value(),
-            "current_ocean_current_direction": current.Variables(12).Value()
+            "current_wave_height": clean_value(current.Variables(0).Value()),
+            "current_wave_direction": clean_value(current.Variables(1).Value()),
+            "current_wave_period": clean_value(current.Variables(2).Value()),
+            "current_wind_wave_height": clean_value(current.Variables(3).Value()),
+            "current_wind_wave_direction": clean_value(current.Variables(4).Value()),
+            "current_wind_wave_period": clean_value(current.Variables(5).Value()),
+            "current_swell_wave_height": clean_value(current.Variables(7).Value()),
+            "current_swell_wave_direction": clean_value(current.Variables(8).Value()),
+            "current_ocean_current_velocity": clean_value(current.Variables(11).Value()),
+            "current_ocean_current_direction": clean_value(current.Variables(12).Value())
         }
         
         # ---- Process Hourly Data (Latest Only) ----
@@ -121,10 +128,14 @@ def get_weather():
         # Get the suitability score from Gemini, including location and coordinates
         suitability_response = send_data_to_gemini(
             "Visakhapatnam", params["latitude"], params["longitude"],
-            latest_hourly_data["wave_height"], latest_hourly_data["wave_direction"],
-            latest_hourly_data["wind_wave_height"], latest_hourly_data["wind_wave_direction"],
-            latest_hourly_data["swell_wave_height"], latest_hourly_data["swell_wave_direction"],
-            latest_hourly_data["ocean_current_velocity"], latest_hourly_data["ocean_current_direction"]
+            clean_value(latest_hourly_data["wave_height"]),
+            clean_value(latest_hourly_data["wave_direction"]),
+            clean_value(latest_hourly_data["wind_wave_height"]),
+            clean_value(latest_hourly_data["wind_wave_direction"]),
+            clean_value(latest_hourly_data["swell_wave_height"]),
+            clean_value(latest_hourly_data["swell_wave_direction"]),
+            clean_value(latest_hourly_data["ocean_current_velocity"]),
+            clean_value(latest_hourly_data["ocean_current_direction"])
         )
         
         # Add the suitability score and safety message to the response
