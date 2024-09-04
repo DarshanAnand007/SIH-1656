@@ -29,14 +29,16 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _fetchLocationData() async {
     try {
-      final response = await http.get(Uri.parse('http://192.168.0.106:5001/weather'));
+      final response =
+          await http.get(Uri.parse('http://192.168.0.106:5001/weather'));
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         final latitude = jsonData['coordinates']['latitude'];
         final longitude = jsonData['coordinates']['longitude'];
         final locationName = jsonData['location'];
-        final rating = Random().nextInt(10) + 1; // Generate random rating for now
+        final rating =
+            Random().nextInt(10) + 1; // Generate random rating for now
 
         setState(() {
           // Add the fetched location to the list
@@ -47,18 +49,18 @@ class _HomePageState extends State<HomePage> {
             "rating": rating,
           });
           _generateMarkers(); // Generate markers after adding new location
-          isLoading = false;  // Stop loading indicator
+          isLoading = false; // Stop loading indicator
         });
       } else {
         print('Failed to load data from API');
         setState(() {
-          isLoading = false;  // Stop loading even if the data fails
+          isLoading = false; // Stop loading even if the data fails
         });
       }
     } catch (e) {
       print("Error fetching data: $e");
       setState(() {
-        isLoading = false;  // Stop loading in case of error
+        isLoading = false; // Stop loading in case of error
       });
     }
   }
@@ -82,7 +84,8 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _addMarker(String city, LatLng position, BitmapDescriptor markerIcon, int rating) {
+  void _addMarker(
+      String city, LatLng position, BitmapDescriptor markerIcon, int rating) {
     setState(() {
       _markers.add(
         Marker(
@@ -109,7 +112,8 @@ class _HomePageState extends State<HomePage> {
     final double markerSize = 150.0;
 
     // Draw circle
-    canvas.drawCircle(Offset(markerSize / 2, markerSize / 2), markerSize / 2, paint);
+    canvas.drawCircle(
+        Offset(markerSize / 2, markerSize / 2), markerSize / 2, paint);
 
     // Draw text
     TextPainter painter = TextPainter(
@@ -125,11 +129,17 @@ class _HomePageState extends State<HomePage> {
       ),
     );
     painter.layout();
-    painter.paint(canvas, Offset(markerSize / 2 - painter.width / 2, markerSize / 2 - painter.height / 2));
+    painter.paint(
+        canvas,
+        Offset(markerSize / 2 - painter.width / 2,
+            markerSize / 2 - painter.height / 2));
 
     // Convert the canvas into an image and then into a BitmapDescriptor
-    final ui.Image image = await pictureRecorder.endRecording().toImage(markerSize.toInt(), markerSize.toInt());
-    final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    final ui.Image image = await pictureRecorder
+        .endRecording()
+        .toImage(markerSize.toInt(), markerSize.toInt());
+    final ByteData? byteData =
+        await image.toByteData(format: ui.ImageByteFormat.png);
     final Uint8List imageData = byteData!.buffer.asUint8List();
 
     return BitmapDescriptor.fromBytes(imageData);
