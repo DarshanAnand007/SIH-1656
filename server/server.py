@@ -13,7 +13,7 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
 # Configure the Google Generative AI (Gemini) API
-genai.configure(api_key="AIzaSyDq5tdo2AL7V_x1zOcBEiNRy6HyQw6sibc")
+genai.configure(api_key="AIzaSyC_X2aqCyaB6Q7HFWBQfkd8pfu8iZtBJx4")
 
 # Setup the Open-Meteo API client with cache and retry on error
 cache_session = requests_cache.CachedSession('.cache', expire_after=3600)
@@ -22,7 +22,11 @@ openmeteo = openmeteo_requests.Client(session=retry_session)
 
 # Function to clean NaN values
 def clean_value(value, default_value=0):
-    return default_value if pd.isnull(value) or math.isnan(value) else value
+    try:
+        return default_value if pd.isnull(value) or math.isnan(value) else value
+    except Exception as e:
+        logging.error(f"Error cleaning value: {e}")
+        return default_value
 
 # Function to send weather data to Gemini AI for beach safety assessment
 def send_data_to_gemini(location, latitude, longitude, wave_height, wave_direction, wind_wave_height, 
@@ -76,7 +80,11 @@ def get_weather():
     try:
         # Fetch the weather data
         responses = openmeteo.weather_api(url, params=params)
-        response = responses[0]
+        response = responses[0] if responses else None
+
+        if response is None:
+            logging.error("No response from Open-Meteo API")
+            return jsonify({"error": "No response from Open-Meteo API"}), 500
         
         # ---- Process Current Data ----
         current = response.Current()

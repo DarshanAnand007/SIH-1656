@@ -16,6 +16,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   GoogleMapController? mapController;
   Set<Marker> _markers = {};
+  bool isLoading = true;
 
   // Initial empty list for locations
   List<Map<String, dynamic>> locations = [];
@@ -27,28 +28,38 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _fetchLocationData() async {
-    final response = await http.get(Uri.parse('http://192.168.0.106:5001/weather'));
+    try {
+      final response = await http.get(Uri.parse('http://192.168.0.106:5001/weather'));
 
-    if (response.statusCode == 200) {
-      final jsonData = json.decode(response.body);
-      final latitude = jsonData['coordinates']['latitude'];
-      final longitude = jsonData['coordinates']['longitude'];
-      final locationName = jsonData['location'];
-      final rating = Random().nextInt(10) + 1; // Generate random rating for now
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        final latitude = jsonData['coordinates']['latitude'];
+        final longitude = jsonData['coordinates']['longitude'];
+        final locationName = jsonData['location'];
+        final rating = Random().nextInt(10) + 1; // Generate random rating for now
 
-      setState(() {
-        // Add the fetched location to the list
-        locations.add({
-          "city": locationName,
-          "lat": latitude,
-          "lng": longitude,
-          "rating": rating,
+        setState(() {
+          // Add the fetched location to the list
+          locations.add({
+            "city": locationName,
+            "lat": latitude,
+            "lng": longitude,
+            "rating": rating,
+          });
+          _generateMarkers(); // Generate markers after adding new location
+          isLoading = false;  // Stop loading indicator
         });
-        _generateMarkers(); // Generate markers after adding new location
+      } else {
+        print('Failed to load data from API');
+        setState(() {
+          isLoading = false;  // Stop loading even if the data fails
+        });
+      }
+    } catch (e) {
+      print("Error fetching data: $e");
+      setState(() {
+        isLoading = false;  // Stop loading in case of error
       });
-    } else {
-      // Handle error response
-      print('Failed to load data from API');
     }
   }
 
@@ -127,31 +138,35 @@ class _HomePageState extends State<HomePage> {
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
     // Move camera to show all points
-    mapController?.animateCamera(
-      CameraUpdate.newLatLngBounds(
-        LatLngBounds(
-          southwest: LatLng(8.0, 68.0),
-          northeast: LatLng(35.0, 97.0),
+    if (locations.isNotEmpty) {
+      mapController?.animateCamera(
+        CameraUpdate.newLatLngBounds(
+          LatLngBounds(
+            southwest: LatLng(8.0, 68.0),
+            northeast: LatLng(35.0, 97.0),
+          ),
+          50,
         ),
-        50,
-      ),
-    );
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Samundar Saathi'),
+        title: const Text('Samudra Saathi'),
       ),
-      body: GoogleMap(
-        onMapCreated: _onMapCreated,
-        initialCameraPosition: CameraPosition(
-          target: LatLng(20.0, 80.0), // Central point of India
-          zoom: 4.5, // Adjust zoom level
-        ),
-        markers: _markers,
-      ),
+      body: isLoading
+          ? Center(child: CircularProgressIndicator()) // Show loading indicator
+          : GoogleMap(
+              onMapCreated: _onMapCreated,
+              initialCameraPosition: CameraPosition(
+                target: LatLng(20.0, 80.0), // Central point of India
+                zoom: 4.5, // Adjust zoom level
+              ),
+              markers: _markers,
+            ),
     );
   }
 }
