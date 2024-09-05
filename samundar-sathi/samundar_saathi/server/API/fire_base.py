@@ -26,7 +26,7 @@ firebase_credentials = {
     "auth_provider_x509_cert_url": os.getenv("FIREBASE_AUTH_PROVIDER_CERT_URL"),
     "client_x509_cert_url": os.getenv("FIREBASE_CLIENT_CERT_URL")
 }
-#Initialize Firebase Admin SDK
+# Initialize Firebase Admin SDK
 cred = credentials.Certificate(firebase_credentials)
 firebase_admin.initialize_app(cred)
 db = firestore.client()
@@ -95,16 +95,32 @@ def fetch_weather_data():
     for beach in beaches:
         fetch_and_store_weather_data_for_beach(beach)
 
-    # Set the interval in minutes (e.g., 2 minutes for testing)
+    # Set the interval in minutes (e.g., 30 minutes)
     interval_minutes = 30  # Set your desired interval here, e.g., 30 for 30 minutes
     schedule.every(interval_minutes).minutes.do(lambda: [fetch_and_store_weather_data_for_beach(beach) for beach in beaches])
+
+    return interval_minutes
+
+# Function to display the countdown timer
+def countdown_timer(minutes):
+    total_seconds = minutes * 60
+    while total_seconds > 0:
+        minutes_left = total_seconds // 60
+        seconds_left = total_seconds % 60
+        print(f"\r 🌊 Beach Data updating in {minutes_left:02d}:{seconds_left:02d} minutes", end="" '🏖️' )
+        time.sleep(1)
+        total_seconds -= 1
+    print("\nFetching data now...\n")
 
 # Main script execution
 if __name__ == "__main__":
     # Start by fetching data immediately
-    fetch_weather_data()
+    interval = fetch_weather_data()
 
     # Run the scheduler in a loop
     while True:
+        # Run the countdown timer until the next fetch
+        countdown_timer(interval)
+
+        # Run pending scheduled jobs
         schedule.run_pending()
-        time.sleep(1)
