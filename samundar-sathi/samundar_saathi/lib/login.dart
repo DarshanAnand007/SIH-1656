@@ -19,10 +19,29 @@ class _LoginPageState extends State<LoginPage> {
   String _errorMessage = '';
 
   @override
+  void initState() {
+    super.initState();
+    _checkUserLoggedIn();
+  }
+
+  @override
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  // Check if a user is already signed in
+  Future<void> _checkUserLoggedIn() async {
+    User? user = _auth.currentUser;
+
+    if (user != null) {
+      // If user is already logged in, navigate to HomePage
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomePage()),
+      );
+    }
   }
 
   // Method to handle login with username and password

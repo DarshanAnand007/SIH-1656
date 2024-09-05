@@ -1,5 +1,5 @@
-import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
+import 'package:carousel_slider/carousel_slider.dart';
 
 class BeachDetailPage extends StatelessWidget {
   final String beachName;
@@ -25,8 +25,7 @@ class BeachDetailPage extends StatelessWidget {
     final List<String> imageUrls = [
       'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTxGYhhCxHXxM5d-KV10RstIRUueQgaAvCloA&s',
       'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSlK2VgKxLjWmmyNELGYf8f3KzpEYbFiVCu4w&s',
-      'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSlK2VgKxLjWmmyNELGYf8f3KzpEYbFiVCu4w&s',
-    ]; // Example image URLs
+    ];
 
     return Scaffold(
       appBar: AppBar(
@@ -36,7 +35,6 @@ class BeachDetailPage extends StatelessWidget {
       ),
       body: Column(
         children: [
-          // Full-screen Carousel
           Stack(
             children: [
               CarouselSlider(
@@ -63,21 +61,6 @@ class BeachDetailPage extends StatelessWidget {
                   );
                 }).toList(),
               ),
-              // Gradient Overlay for better text readability
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black54,
-                      ],
-                    ),
-                  ),
-                ),
-              ),
               Positioned(
                 bottom: 20,
                 left: 20,
@@ -93,14 +76,30 @@ class BeachDetailPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-          // Safety Score with circular badge
+          
+          // Adding Popular Times Widget
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0), // Added padding around container
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: PopularTimesWidget(),
+          ),
+          
+          const SizedBox(height: 20),
+
+          // Adding Weather Widget
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: WeatherWidget(),
+          ),
+
+          const SizedBox(height: 20),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Container(
-              padding: const EdgeInsets.all(20), // More padding for spaciousness
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
-                color: Colors.white.withOpacity(0.7), // Higher opacity for clearer contrast
+                color: Colors.white.withOpacity(0.7),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black12,
@@ -135,30 +134,29 @@ class BeachDetailPage extends StatelessWidget {
                         child: Text(
                           safetyScore.toString(),
                           style: const TextStyle(
-                            fontSize: 26, // Slightly reduced font size
+                            fontSize: 26,
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12), // Increased spacing between badge and text
+                      const SizedBox(width: 12),
                       Text(
                         'Safety Score',
                         style: const TextStyle(
-                          fontSize: 22, // Slightly reduced font size
+                          fontSize: 22,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12), // Extra space
-                  // Safety Message
+                  const SizedBox(height: 12),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12.0),
                     child: Text(
                       safetyMessage,
                       style: const TextStyle(
-                        fontSize: 16, // Slightly smaller font for text
+                        fontSize: 16,
                         color: Colors.black87,
                       ),
                       textAlign: TextAlign.center,
@@ -168,47 +166,93 @@ class BeachDetailPage extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 20), // Extra space
-          // Reasons List with Card Design
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 20,
-                    spreadRadius: 1,
-                    offset: Offset(0, -3),
+        ],
+      ),
+    );
+  }
+}
+
+class PopularTimesWidget extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Popular Times',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: List.generate(7, (index) {
+            return Column(
+              children: [
+                Container(
+                  width: 8,
+                  height: 50 - index * 5.0, // Simulate busyness
+                  decoration: BoxDecoration(
+                    color: index == 5 ? Colors.blue : Colors.grey, // Show blue for peak time
+                    borderRadius: BorderRadius.circular(4),
                   ),
-                ],
-              ),
-              child: ListView.builder(
-                itemCount: reasons.length,
-                itemBuilder: (context, index) {
-                  return Card(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    elevation: 3, // Reduced elevation for a lighter feel
-                    margin: const EdgeInsets.symmetric(vertical: 12), // Increased vertical spacing between cards
-                    child: ListTile(
-                      leading: Icon(
-                        Icons.warning_amber_rounded,
-                        color: _getMarkerColor(safetyScore),
-                        size: 26, // Reduced icon size for better spacing
-                      ),
-                      title: Text(
-                        reasons[index].toString(),
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
+                ),
+                const SizedBox(height: 5),
+                Text('${index + 1} PM'),
+              ],
+            );
+          }),
+        ),
+      ],
+    );
+  }
+}
+
+class WeatherWidget extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 10,
+            spreadRadius: 1,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            children: const [
+              Icon(Icons.wb_cloudy),
+              SizedBox(height: 5),
+              Text('Thu'),
+              Text('29°', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          Column(
+            children: const [
+              Icon(Icons.wb_cloudy),
+              SizedBox(height: 5),
+              Text('Fri'),
+              Text('28°', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          Column(
+            children: const [
+              Icon(Icons.wb_cloudy),
+              SizedBox(height: 5),
+              Text('Sat'),
+              Text('28°', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
           ),
         ],
       ),
