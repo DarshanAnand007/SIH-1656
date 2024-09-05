@@ -9,12 +9,14 @@ environment:
 dependencies:
   carousel_slider: ^5.0.0
   cloud_firestore: ^4.14.0
+  firebase_auth: ^4.16.0
   firebase_core: ^2.24.2
   flutter:
     sdk: flutter
   flutter_inappwebview: ^6.0.0
   flutter_map: ^7.0.2
   flutter_widget_from_html: ^0.15.2
+  fluttertoast: ^8.2.8
   google_maps_flutter: ^2.9.0
   lottie: ^3.1.2
   webview_flutter: ^4.9.0
