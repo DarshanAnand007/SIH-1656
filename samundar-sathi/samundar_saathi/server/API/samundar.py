@@ -1,7 +1,34 @@
+import os
+from dotenv import load_dotenv
+from firebase_admin import credentials, firestore
+import firebase_admin
 import openmeteo_requests
 import requests_cache
-import pandas as pd
+import schedule
+import time
 from retry_requests import retry
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Firebase credentials from environment variables
+firebase_credentials = {
+    "type": "service_account",
+    "project_id": os.getenv("FIREBASE_PROJECT_ID"),
+    "private_key_id": os.getenv("FIREBASE_PRIVATE_KEY_ID"),
+    "private_key": os.getenv("FIREBASE_PRIVATE_KEY").replace("\\n", "\n"),  # Handle newlines in private key
+    "client_email": os.getenv("FIREBASE_CLIENT_EMAIL"),
+    "client_id": os.getenv("FIREBASE_CLIENT_ID"),
+    "auth_uri": os.getenv("FIREBASE_AUTH_URI"),
+    "token_uri": os.getenv("FIREBASE_TOKEN_URI"),
+    "auth_provider_x509_cert_url": os.getenv("FIREBASE_AUTH_PROVIDER_CERT_URL"),
+    "client_x509_cert_url": os.getenv("FIREBASE_CLIENT_CERT_URL")
+}
+
+# Initialize Firebase Admin SDK
+cred = credentials.Certificate(firebase_credentials)
+firebase_admin.initialize_app(cred)
+db = firestore.client()
 
 # Setup the Open-Meteo API client with cache and retry on error
 cache_session = requests_cache.CachedSession('.cache', expire_after=3600)
@@ -10,8 +37,6 @@ openmeteo = openmeteo_requests.Client(session=retry_session)
 
 # List of beaches with their coordinates (latitude, longitude)
 beaches = [
-    {"name": "Visakhapatnam Beach", "latitude": 17.6868, "longitude": 83.2185},
-    {"name": "Ramakrishna Beach", "latitude": 17.7196, "longitude": 83.3189},
     {"name": "Marina Beach", "latitude": 13.0500, "longitude": 80.2824},
     {"name": "Kovalam Beach", "latitude": 8.3772, "longitude": 76.9460},
     {"name": "Calangute Beach", "latitude": 15.5445, "longitude": 73.7553}
@@ -96,66 +121,116 @@ def assess_beach_safety(wave_height, wave_direction, wind_wave_height, wind_wave
         "safety_score": safety_score,
         "reasons": reason
     }
+    
+# Function to safely extract variables from the Open-Meteo API response
+def safe_get_variable(response, index):
+    try:
+        return response.Current().Variables(index).Value()
+    except (IndexError, AttributeError, TypeError):
+        return None
 
-# Function to process the weather data for each beach
-def fetch_weather_data_for_beach(beach):
+# Function to fetch and store weather data for each beach
+def fetch_and_store_weather_data_for_beach(beach):
     url = "https://marine-api.open-meteo.com/v1/marine"
     params = {
         "latitude": beach["latitude"],
         "longitude": beach["longitude"],
-        "current": ["wave_height", "wave_direction", "wave_period", "wind_wave_height", "wind_wave_direction", 
-                    "wind_wave_period", "wind_wave_peak_period", "swell_wave_height", "swell_wave_direction", 
-                    "swell_wave_period", "swell_wave_peak_period", "ocean_current_velocity", "ocean_current_direction"],
-        "hourly": ["wave_height", "wave_direction", "wave_period", "wind_wave_height", "wind_wave_direction", 
-                   "wind_wave_period", "wind_wave_peak_period", "swell_wave_height", "swell_wave_direction", 
-                   "swell_wave_period", "swell_wave_peak_period", "ocean_current_velocity", "ocean_current_direction"],
+        "current": ["wave_height", "wave_direction", "wave_period", "wind_wave_height", "wind_wave_direction"],
+        "hourly": ["wave_height", "wave_direction", "wave_period", "wind_wave_height", "wind_wave_direction"],
         "daily": ["wave_height_max", "wave_direction_dominant", "wave_period_max", "wind_wave_height_max", 
-                  "wind_wave_direction_dominant", "wind_wave_period_max", "wind_wave_peak_period_max", 
-                  "swell_wave_height_max", "swell_wave_direction_dominant", "swell_wave_period_max", 
-                  "swell_wave_peak_period_max"]
+                  "wind_wave_direction_dominant"]
     }
 
     # Fetch the weather data
     responses = openmeteo.weather_api(url, params=params)
     response = responses[0]  # Assume first response is the one we need
 
-    # Process current data safely
-    current = response.Current()
-    
-    # Define a function to safely get variables by index
-    def get_variable(var_index):
-        try:
-            return current.Variables(var_index).Value()
-        except (IndexError, TypeError):
-            return None
+    # Safely retrieve data
+    wave_height = safe_get_variable(response, 0)
+    wave_direction = safe_get_variable(response, 1)
+    wind_wave_height = safe_get_variable(response, 3)
+    wind_wave_direction = safe_get_variable(response, 4)
+    ocean_current_velocity = safe_get_variable(response, 5)  # Handle missing data safely
 
-    wave_height = get_variable(0)
-    wave_direction = get_variable(1)
-    wind_wave_height = get_variable(3)
-    wind_wave_direction = get_variable(4)
-    ocean_current_velocity = get_variable(11)
-    ocean_current_direction = get_variable(12)
+    wave_height_max = safe_get_variable(response, 0)  # Assuming the index for max wave height
+    wind_wave_height_max = safe_get_variable(response, 3)  # Assuming the index for max wind wave height
 
-    daily = response.Daily()
-    wave_height_max = daily.Variables(0).ValuesAsNumpy()[-1]  # Assuming latest
-    wind_wave_height_max = daily.Variables(3).ValuesAsNumpy()[-1]  # Assuming latest
+    # Check if values are available
+    if not wave_height or not wind_wave_height:
+        print(f"Warning: No data available for {beach['name']}")
+        return
 
-    # Assess safety using the assess_beach_safety function
+    current_data = {
+        "wave_height": wave_height,
+        "wave_direction": wave_direction,
+        "wind_wave_height": wind_wave_height,
+        "wind_wave_direction": wind_wave_direction,
+        "ocean_current_velocity": ocean_current_velocity,
+        "wave_height_max": wave_height_max,
+        "wind_wave_height_max": wind_wave_height_max
+    }
+
+    # Assess beach safety based on the weather data
     safety_report = assess_beach_safety(
         wave_height=wave_height, wave_direction=wave_direction, 
         wind_wave_height=wind_wave_height, wind_wave_direction=wind_wave_direction,
-        ocean_current_velocity=ocean_current_velocity, ocean_current_direction=ocean_current_direction,
-        wave_height_max=wave_height_max, wind_wave_height_max=wind_wave_height_max
+        ocean_current_velocity=ocean_current_velocity, wave_height_max=wave_height_max, 
+        wind_wave_height_max=wind_wave_height_max
     )
 
-    # Print the safety report
-    print(f"\nLocation: {beach['name']}")
-    print(f"Safety Message: {safety_report['safety_message']}")
-    print(f"Safety Score: {safety_report['safety_score']}")
-    print("Reasons:")
-    for reason in safety_report['reasons']:
-        print(f"- {reason}")
+    # Print the data being sent to Firestore (for terminal output)
+    print(f"\nStoring data for {beach['name']}:")
+    print(f"Current Weather Data: {current_data}")
+    print(f"Safety Report: {safety_report}")
 
-# Loop through each beach and fetch the weather data
-for beach in beaches:
-    fetch_weather_data_for_beach(beach)
+    # Store in Firestore
+    store_weather_and_safety_data_in_firestore(beach, current_data, safety_report)
+
+# Function to store weather and safety data in Firestore
+def store_weather_and_safety_data_in_firestore(beach, weather_data, safety_report):
+    beach_ref = db.collection("samundar_data").document(beach['name'])  # Collection name: 'samundar_data'
+    
+    # Update the document with the new weather and safety data
+    beach_ref.set({
+        'name': beach['name'],
+        'weather': weather_data,
+        'safety_report': safety_report,
+        'timestamp': firestore.SERVER_TIMESTAMP
+    }, merge=True)
+
+    print(f"Weather and safety data for {beach['name']} added to Firestore successfully.")
+
+def fetch_weather_data():
+    # Fetch data immediately
+    for beach in beaches:
+        fetch_and_store_weather_data_for_beach(beach)
+
+    # Set the interval in minutes (e.g., 30 minutes)
+    interval_minutes = 30  # Set your desired interval here, e.g., 30 for 30 minutes
+    schedule.every(interval_minutes).minutes.do(lambda: [fetch_and_store_weather_data_for_beach(beach) for beach in beaches])
+
+    return interval_minutes
+
+# Function to display the countdown timer
+def countdown_timer(minutes):
+    total_seconds = minutes * 60
+    while total_seconds > 0:
+        minutes_left = total_seconds // 60
+        seconds_left = total_seconds % 60
+        print(f"\r 🌊 Beach Data updating in {minutes_left:02d}:{seconds_left:02d} minutes 🏖️", end="")
+        time.sleep(1)
+        total_seconds -= 1
+    print("\nFetching data now...\n")
+    
+# Main script execution
+if __name__ == "__main__":
+    # Start by fetching data immediately
+    interval = fetch_weather_data()
+
+    # Run the scheduler in a loop
+    while True:
+        # Run the countdown timer until the next fetch
+        countdown_timer(interval)
+
+        # Run pending scheduled jobs
+        schedule.run_pending()
