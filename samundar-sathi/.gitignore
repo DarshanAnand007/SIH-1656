@@ -1,6 +1,2 @@
-# Firebase Credentials
-samundar-sathi/samundar_saathi/server/API/samundar-sathi-firebase-adminsdk*.json
-
-
 # Ignore the .env file that contains sensitive credentials
 .env

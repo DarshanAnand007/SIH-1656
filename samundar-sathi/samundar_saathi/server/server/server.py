@@ -27,7 +27,7 @@ def clean_value(value, default_value=0):
 def send_data_to_gemini(location, latitude, longitude, wave_height, wave_direction, wind_wave_height, 
                         wind_wave_direction, swell_wave_height=None, swell_wave_direction=None, 
                         ocean_current_velocity=None, ocean_current_direction=None):
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel("gemini-1.5-pro")
     
     # Create a concise prompt for the AI to generate a short response
     prompt = (
