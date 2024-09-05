@@ -7,6 +7,9 @@ environment:
   sdk: ">=3.4.4 <4.0.0"
 
 dependencies:
+  carousel_slider: ^5.0.0
+  cloud_firestore: ^4.14.0
+  firebase_core: ^2.24.2
   flutter:
     sdk: flutter
   flutter_inappwebview: ^6.0.0

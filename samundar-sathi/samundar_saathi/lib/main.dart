@@ -1,8 +1,21 @@
+import 'dart:developer';
+
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import 'package:samundar_saathi/firebase_options.dart';
 import 'package:samundar_saathi/login.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    log('initaialized');
+  } catch (e) {
+    log('not initaialized $e');
+  }
   runApp(const MainApp());
 }
 
@@ -13,6 +26,7 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       home: SplashScreen(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }

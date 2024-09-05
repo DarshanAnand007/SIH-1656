@@ -1,10 +1,14 @@
 import 'dart:convert';
+import 'dart:developer';
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:http/http.dart' as http;
-import 'dart:math'; // For generating random ratings
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
+
+import 'package:samundar_saathi/beachdetail.dart'; // For Timer
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -18,51 +22,83 @@ class _HomePageState extends State<HomePage> {
   Set<Marker> _markers = {};
   bool isLoading = true;
 
+  // Firestore instance
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Timer to refresh data every 25 minutes
+  Timer? _timer;
+
   // Initial empty list for locations
   List<Map<String, dynamic>> locations = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchLocationData(); // Fetch locations from API
+    _fetchLocationData(); // Fetch locations initially
+
+    // Set timer to fetch data every 25 minutes
+    _timer = Timer.periodic(const Duration(minutes: 25), (timer) {
+      _fetchLocationData();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel(); // Cancel the timer when the widget is disposed
+    super.dispose();
   }
 
   Future<void> _fetchLocationData() async {
     try {
-      final response =
-          await http.get(Uri.parse('http://192.168.0.106:5001/weather'));
+      final QuerySnapshot snapshot =
+          await _firestore.collection('samundar_data').get();
 
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        final latitude = jsonData['coordinates']['latitude'];
-        final longitude = jsonData['coordinates']['longitude'];
-        final locationName = jsonData['location'];
-        final rating =
-            Random().nextInt(10) + 1; // Generate random rating for now
+      List<Map<String, dynamic>> newLocations = [];
 
-        setState(() {
-          // Add the fetched location to the list
-          locations.add({
-            "city": locationName,
-            "lat": latitude,
-            "lng": longitude,
-            "rating": rating,
-          });
-          _generateMarkers(); // Generate markers after adding new location
-          isLoading = false; // Stop loading indicator
-        });
-      } else {
-        print('Failed to load data from API');
-        setState(() {
-          isLoading = false; // Stop loading even if the data fails
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+
+        // Accessing safety_score from safety_report
+        final safetyReport = data['safety_report'];
+        final safetyScore = safetyReport['safety_score'];
+        final roundedScore = safetyScore != null
+            ? safetyScore.round()
+            : 0; // Round off the score
+
+        log('${data}');
+
+        // Generate random lat/lng values within the range of India (approx)
+        final double randomLat =
+            _generateRandomInRange(8.0, 35.0); // Latitude range for India
+        final double randomLng =
+            _generateRandomInRange(68.0, 97.0); // Longitude range for India
+
+        newLocations.add({
+          "city": data['name'], // Beach name from the "name" field
+          "lat": randomLat, // Random latitude
+          "lng": randomLng, // Random longitude
+          "rating": roundedScore, // Use the rounded score
         });
       }
+
+      setState(() {
+        locations = newLocations; // Update the locations list
+        _markers.clear(); // Clear old markers
+        _generateMarkers(); // Generate new markers
+        isLoading = false; // Stop loading indicator
+      });
     } catch (e) {
-      print("Error fetching data: $e");
+      log("Error fetching data from Firestore: $e");
       setState(() {
         isLoading = false; // Stop loading in case of error
       });
     }
+  }
+
+// Helper function to generate random values in a given range
+  double _generateRandomInRange(double start, double end) {
+    final random = math.Random();
+    return start + (random.nextDouble() * (end - start));
   }
 
   // Function to generate color based on rating
@@ -74,7 +110,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _generateMarkers() async {
     for (var location in locations) {
-      final customMarker = await _createMarkerWithRating(location['rating']);
+      final customMarker = await createMarkerWithRingAndScore(location['rating']);
       _addMarker(
         location['city'],
         LatLng(location['lat'], location['lng']),
@@ -84,66 +120,90 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _addMarker(
-      String city, LatLng position, BitmapDescriptor markerIcon, int rating) {
-    setState(() {
-      _markers.add(
-        Marker(
-          markerId: MarkerId(city),
-          position: position,
-          icon: markerIcon,
-          infoWindow: InfoWindow(
-            title: city,
-            snippet: 'Rating: $rating',
-          ),
+  void _addMarker(String city, LatLng position, BitmapDescriptor markerIcon, int rating) {
+  setState(() {
+    _markers.add(
+      Marker(
+        markerId: MarkerId(city),
+        position: position,
+        icon: markerIcon,
+        infoWindow: InfoWindow(
+          title: city,
+          snippet: 'Rating: $rating',
+          onTap: () {
+            // Navigate to the detailed page when the marker is tapped
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => BeachDetailPage(
+                  beachName: city,
+                  rating: rating,
+                  safetyMessage: "Safe", // Example safety message, you can pass actual data
+                  weatherData: { // Example weather data, replace with actual data
+                    "wave_height": 0.86,
+                    "wind_speed": 147,
+                    "wave_direction": 255,
+                  },
+                ),
+              ),
+            );
+          },
         ),
-      );
-    });
-  }
-
-  // Function to create a custom marker with rating inside
-  Future<BitmapDescriptor> _createMarkerWithRating(int rating) async {
-    final Color circleColor = _getMarkerColor(rating);
-
-    // Create a marker widget dynamically
-    final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
-    final Canvas canvas = Canvas(pictureRecorder);
-    final Paint paint = Paint()..color = circleColor;
-    final double markerSize = 150.0;
-
-    // Draw circle
-    canvas.drawCircle(
-        Offset(markerSize / 2, markerSize / 2), markerSize / 2, paint);
-
-    // Draw text
-    TextPainter painter = TextPainter(
-      textDirection: TextDirection.ltr,
-      textAlign: TextAlign.center,
-    );
-    painter.text = TextSpan(
-      text: rating.toString(),
-      style: TextStyle(
-        fontSize: 60.0,
-        color: Colors.black,
-        fontWeight: FontWeight.bold,
       ),
     );
-    painter.layout();
-    painter.paint(
-        canvas,
-        Offset(markerSize / 2 - painter.width / 2,
-            markerSize / 2 - painter.height / 2));
+  });
+}
 
-    // Convert the canvas into an image and then into a BitmapDescriptor
-    final ui.Image image = await pictureRecorder
-        .endRecording()
-        .toImage(markerSize.toInt(), markerSize.toInt());
-    final ByteData? byteData =
-        await image.toByteData(format: ui.ImageByteFormat.png);
-    final Uint8List imageData = byteData!.buffer.asUint8List();
 
-    return BitmapDescriptor.fromBytes(imageData);
-  }
+  // Function to create a custom marker with rating inside
+  // Function to create a custom marker with a colored ring and a score in the center
+Future<BitmapDescriptor> createMarkerWithRingAndScore(int rating) async {
+  final Color ringColor = _getMarkerColor(rating); // Outer ring color based on rating
+
+  final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
+  final Canvas canvas = Canvas(pictureRecorder);
+  final Paint outerRingPaint = Paint()..color = ringColor; // Color for outer ring
+  final Paint innerCirclePaint = Paint()..color = Colors.white; // White inner circle
+
+  final double markerSize = 150.0;
+  final double ringWidth = 20.0; // Width of the outer ring
+
+  // Draw outer ring (circle with color based on rating)
+  canvas.drawCircle(Offset(markerSize / 2, markerSize / 2), markerSize / 2, outerRingPaint);
+
+  // Draw inner circle (white)
+  canvas.drawCircle(Offset(markerSize / 2, markerSize / 2), (markerSize / 2) - ringWidth, innerCirclePaint);
+
+  // Draw the rating text
+  TextPainter painter = TextPainter(
+    textDirection: TextDirection.ltr,
+    textAlign: TextAlign.center,
+  );
+  painter.text = TextSpan(
+    text: rating.toString(),
+    style: TextStyle(
+      fontSize: 60.0,
+      color: Colors.black,
+      fontWeight: FontWeight.bold,
+    ),
+  );
+  painter.layout();
+  painter.paint(
+      canvas,
+      Offset(markerSize / 2 - painter.width / 2,
+          markerSize / 2 - painter.height / 2));
+
+  // Convert the canvas into an image and then into a BitmapDescriptor
+  final ui.Image image = await pictureRecorder
+      .endRecording()
+      .toImage(markerSize.toInt(), markerSize.toInt());
+  final ByteData? byteData =
+      await image.toByteData(format: ui.ImageByteFormat.png);
+  final Uint8List imageData = byteData!.buffer.asUint8List();
+
+  return BitmapDescriptor.fromBytes(imageData);
+}
+
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
@@ -152,8 +212,8 @@ class _HomePageState extends State<HomePage> {
       mapController?.animateCamera(
         CameraUpdate.newLatLngBounds(
           LatLngBounds(
-            southwest: LatLng(8.0, 68.0),
-            northeast: LatLng(35.0, 97.0),
+            southwest: const LatLng(8.0, 68.0),
+            northeast: const LatLng(35.0, 97.0),
           ),
           50,
         ),
@@ -168,10 +228,10 @@ class _HomePageState extends State<HomePage> {
         title: const Text('Samudra Saathi'),
       ),
       body: isLoading
-          ? Center(child: CircularProgressIndicator()) // Show loading indicator
+          ? const Center(child: CircularProgressIndicator()) // Show loading indicator
           : GoogleMap(
               onMapCreated: _onMapCreated,
-              initialCameraPosition: CameraPosition(
+              initialCameraPosition: const CameraPosition(
                 target: LatLng(20.0, 80.0), // Central point of India
                 zoom: 4.5, // Adjust zoom level
               ),
@@ -179,10 +239,4 @@ class _HomePageState extends State<HomePage> {
             ),
     );
   }
-}
-
-void main() {
-  runApp(MaterialApp(
-    home: HomePage(),
-  ));
 }
