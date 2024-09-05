@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "234486617658",
+    "project_id": "samundar-sathi",
+    "storage_bucket": "samundar-sathi.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:234486617658:android:5bb997760cdce82980c703",
+        "android_client_info": {
+          "package_name": "com.app.py"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD0D2q7LPlhZHphxKMYWwekTadpNQKGZ9k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

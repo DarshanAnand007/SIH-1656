@@ -24,25 +24,22 @@ openmeteo = openmeteo_requests.Client(session=retry_session)
 def clean_value(value, default_value=0):
     return default_value if pd.isnull(value) or math.isnan(value) else value
 
-def send_data_to_groq(location, latitude, longitude, wave_height, wave_direction, wind_wave_height, 
-                      wind_wave_direction, swell_wave_height=None, swell_wave_direction=None, 
-                      ocean_current_velocity=None, ocean_current_direction=None):
-    prompt = (
+# First API call to get safety message with "Safe" or "Unsafe"
+def get_safety_message(location, wave_height, wind_wave_height, ocean_current_velocity):
+    prompt_message = (
         f"Assess the safety of the beach at {location} based on the provided weather data. "
-        f"Give a concise and clear reason for the safety decision and assign a safety score between 1 and 10. "
-        f"The message should begin with 'Safe' or 'Unsafe' and provide a short, complete explanation in one or two sentences. "
         f"Wave height: {wave_height} meters. "
         f"Wind wave height: {wind_wave_height} meters. "
-        f"Ocean current velocity: {ocean_current_velocity} m/s.\n"
-        f"Provide a safety score formatted as 'x/10'."
+        f"Ocean current velocity: {ocean_current_velocity} m/s. "
+        "Provide a short, complete explanation starting with 'Safe' or 'Unsafe'."
     )
 
     try:
-        logging.debug(f"Sending prompt to Groq: {prompt}")
+        logging.debug(f"Sending prompt to Groq for safety message: {prompt_message}")
         chat_completion = client.chat.completions.create(
             messages=[{
                 "role": "user",
-                "content": prompt
+                "content": prompt_message
             }],
             model="llama3-8b-8192",
         )
@@ -50,54 +47,59 @@ def send_data_to_groq(location, latitude, longitude, wave_height, wave_direction
         response = chat_completion.choices[0].message.content
 
         if response:
-            logging.debug(f"Received response from Groq: {response}")
-            
-            # Initialize variables to hold safety score and message
-            safety_score = None
-            safety_message = None
-
-            # Search for "safety score" in the response and extract it
-            if "safety score" in response.lower():
-                try:
-                    score_line = [line for line in response.split("\n") if "safety score" in line.lower()]
-                    if score_line:
-                        safety_score_str = score_line[0].split()[-1]  # Extract the score (last part of the line)
-                        safety_score = int(safety_score_str)  # Convert to integer
-                except (ValueError, IndexError):
-                    logging.error("Safety score extraction failed, defaulting to None.")
-            
-            # Set the safety score to "0/10" if not found or extracted properly
-            if safety_score is None:
-                safety_score = "0/10"
+            logging.debug(f"Received safety message from Groq: {response}")
+            # Ensure response contains "Safe" or "Unsafe"
+            if "Safe" in response or "Unsafe" in response:
+                return response.strip()
             else:
-                safety_score = f"{safety_score}/10"
-
-            # Extract the safety message (one-line summary)
-            safety_message_lines = response.split("\n")[1:]
-            if safety_message_lines:
-                safety_message = " ".join(safety_message_lines).strip()
-
-            # Assess safety as "Safe" or "Unsafe" based on score
-            safety_status = "Safe" if int(safety_score.split("/")[0]) >= 6 else "Unsafe"
-
-            # Construct a final message with the safety score formatted as "x/10"
-            final_message = (
-                f"{safety_status}: {safety_message.split('.')[0]}. Safety score: {safety_score}"
-            )
-
-            return {
-                "safety_message": final_message,
-                "safety_score": safety_score
-            }
-
+                return "Unsafe: Unable to determine beach safety."
         else:
             logging.error("No valid response from AI")
-            return {"safety_message": "No valid response from AI.", "safety_score": "0/10"}
+            return "Unsafe: No valid response from AI."
 
     except Exception as e:
         logging.error(f"Error occurred during Groq response: {e}")
-        return {"safety_message": "An error occurred while determining beach safety.", "safety_score": "0/10"}
+        return "Unsafe: An error occurred while determining beach safety."
 
+# Second API call to get safety score as "x/10"
+def get_safety_score(location, wave_height, wind_wave_height, ocean_current_velocity):
+    prompt_score = (
+        f"Assign a safety score between 1 and 10 for the beach at {location} based on the weather data. "
+        f"Wave height: {wave_height} meters. "
+        f"Wind wave height: {wind_wave_height} meters. "
+        f"Ocean current velocity: {ocean_current_velocity} m/s.\n"
+        "Provide the safety score formatted as 'x/10'."
+    )
+
+    try:
+        logging.debug(f"Sending prompt to Groq for safety score: {prompt_score}")
+        chat_completion = client.chat.completions.create(
+            messages=[{
+                "role": "user",
+                "content": prompt_score
+            }],
+            model="llama3-8b-8192",
+        )
+
+        response = chat_completion.choices[0].message.content
+
+        if response:
+            logging.debug(f"Received safety score from Groq: {response}")
+            # Extract the safety score from the response
+            try:
+                score_line = response.split("\n")[0]  # Extract the first line with the score
+                safety_score = score_line.split()[-1]  # Extract the score (last part of the line)
+                return safety_score
+            except (ValueError, IndexError):
+                logging.error("Safety score extraction failed, defaulting to '0/10'.")
+                return "0/10"
+        else:
+            logging.error("No valid response from AI")
+            return "0/10"
+
+    except Exception as e:
+        logging.error(f"Error occurred during Groq response: {e}")
+        return "0/10"
 
 
 @app.route('/weather', methods=['GET'])
@@ -171,20 +173,23 @@ def get_weather():
         # Get the latest entry by selecting the last row
         latest_hourly_data = hourly_dataframe.iloc[-1]
         
-        # Get the suitability score from Groq, including location and coordinates
-        suitability_response = send_data_to_groq(
-            "Visakhapatnam", params["latitude"], params["longitude"],
+        # Get the safety message from Groq
+        safety_message = get_safety_message(
+            "Visakhapatnam",
             clean_value(latest_hourly_data["wave_height"]),
-            clean_value(latest_hourly_data["wave_direction"]),
             clean_value(latest_hourly_data["wind_wave_height"]),
-            clean_value(latest_hourly_data["wind_wave_direction"]),
-            clean_value(latest_hourly_data["swell_wave_height"]),
-            clean_value(latest_hourly_data["swell_wave_direction"]),
-            clean_value(latest_hourly_data["ocean_current_velocity"]),
-            clean_value(latest_hourly_data["ocean_current_direction"])
+            clean_value(latest_hourly_data["ocean_current_velocity"])
         )
         
-        # Add the suitability score and safety message to the response
+        # Get the safety score from Groq
+        safety_score = get_safety_score(
+            "Visakhapatnam",
+            clean_value(latest_hourly_data["wave_height"]),
+            clean_value(latest_hourly_data["wind_wave_height"]),
+            clean_value(latest_hourly_data["ocean_current_velocity"])
+        )
+        
+        # Add the safety message and score to the response
         response_data = {
             "location": "Rama Krishna Beach, Visakhapatnam",
             "coordinates": {
@@ -202,7 +207,8 @@ def get_weather():
                 "ocean_current_direction": latest_hourly_data["ocean_current_direction"]
             },
             "suitability": {
-                "safety_message": suitability_response  # AI-generated short suitability response
+                "safety_message": safety_message,  # AI-generated short safety message with "Safe" or "Unsafe"
+                "safety_score": f"{safety_score}/10" if safety_score.isdigit() else "0/10"  # Ensure valid score formatting
             }
         }
         
