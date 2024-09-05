@@ -212,15 +212,18 @@ def fetch_and_store_weather_data_for_beach(beach):
 def store_weather_and_safety_data_in_firestore(beach, weather_data, safety_report):
     beach_ref = db.collection("samundar_data").document(beach['name'])  # Collection name: 'samundar_data'
     
-    # Update the document with the new weather and safety data
+    # Update the document with the new weather, safety data, and location information
     beach_ref.set({
         'name': beach['name'],
+        'latitude': beach['latitude'],
+        'longitude': beach['longitude'],
         'weather': weather_data,
         'safety_report': safety_report,
         'timestamp': firestore.SERVER_TIMESTAMP
     }, merge=True)
 
-    print(f"Weather and safety data for {beach['name']} added to Firestore successfully.")
+    print(f"Weather, safety data, and location for {beach['name']} added to Firestore successfully.")
+
 
 def fetch_weather_data():
     # Fetch data immediately

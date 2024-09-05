@@ -49,51 +49,46 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _fetchLocationData() async {
-    try {
-      final QuerySnapshot snapshot =
-          await _firestore.collection('samundar_data').get();
+  try {
+    final QuerySnapshot snapshot =
+        await _firestore.collection('samundar_data').get();
 
-      List<Map<String, dynamic>> newLocations = [];
+    List<Map<String, dynamic>> newLocations = [];
 
-      for (var doc in snapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
+    for (var doc in snapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
 
-        // Accessing safety_score from safety_report
-        final safetyReport = data['safety_report'];
-        final safetyScore = safetyReport['safety_score'];
-        final roundedScore = safetyScore != null
-            ? safetyScore.round()
-            : 0; // Round off the score
+      // Accessing safety_score from safety_report
+      final safetyReport = data['safety_report'];
+      final safetyScore = safetyReport['safety_score'];
+      final roundedScore = safetyScore != null ? safetyScore.round() : 0; // Round off the score
 
-        log('${data}');
+      // Retrieve latitude and longitude from Firestore data
+      final double lat = data['latitude']?.toDouble() ?? 0.0;
+      final double lng = data['longitude']?.toDouble() ?? 0.0;
 
-        // Generate random lat/lng values within the range of India (approx)
-        final double randomLat =
-            _generateRandomInRange(8.0, 35.0); // Latitude range for India
-        final double randomLng =
-            _generateRandomInRange(68.0, 97.0); // Longitude range for India
-
-        newLocations.add({
-          "city": data['name'], // Beach name from the "name" field
-          "lat": randomLat, // Random latitude
-          "lng": randomLng, // Random longitude
-          "rating": roundedScore, // Use the rounded score
-        });
-      }
-
-      setState(() {
-        locations = newLocations; // Update the locations list
-        _markers.clear(); // Clear old markers
-        _generateMarkers(); // Generate new markers
-        isLoading = false; // Stop loading indicator
-      });
-    } catch (e) {
-      log("Error fetching data from Firestore: $e");
-      setState(() {
-        isLoading = false; // Stop loading in case of error
+      newLocations.add({
+        "city": data['name'], // Beach name from the "name" field
+        "lat": lat, // Actual latitude
+        "lng": lng, // Actual longitude
+        "rating": roundedScore, // Use the rounded score
       });
     }
+
+    setState(() {
+      locations = newLocations; // Update the locations list
+      _markers.clear(); // Clear old markers
+      _generateMarkers(); // Generate new markers
+      isLoading = false; // Stop loading indicator
+    });
+  } catch (e) {
+    log("Error fetching data from Firestore: $e");
+    setState(() {
+      isLoading = false; // Stop loading in case of error
+    });
   }
+}
+
 
 // Helper function to generate random values in a given range
   double _generateRandomInRange(double start, double end) {
