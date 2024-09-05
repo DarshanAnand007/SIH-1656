@@ -35,12 +35,19 @@ cache_session = requests_cache.CachedSession('.cache', expire_after=3600)
 retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
 openmeteo = openmeteo_requests.Client(session=retry_session)
 
-# List of beaches with their coordinates (latitude, longitude)
 beaches = [
-    {"name": "Marina Beach", "latitude": 13.0500, "longitude": 80.2824},
-    {"name": "Kovalam Beach", "latitude": 8.3772, "longitude": 76.9460},
-    {"name": "Calangute Beach", "latitude": 15.5445, "longitude": 73.7553}
+    {"name": "Marina Beach", "latitude": 13.0500, "longitude": 80.2824},  # Chennai, Tamil Nadu
+    {"name": "Kovalam Beach", "latitude": 8.3772, "longitude": 76.9460},  # Kovalam, Kerala
+    {"name": "Calangute Beach", "latitude": 15.5445, "longitude": 73.7553},  # Calangute, Goa
+    {"name": "Rushikonda Beach", "latitude": 17.7696, "longitude": 83.3858},  # Visakhapatnam, Andhra Pradesh
+    {"name": "Baga Beach", "latitude": 15.5526, "longitude": 73.7672},  # Baga, Goa
+    {"name": "Varkala Beach", "latitude": 8.7379, "longitude": 76.7010},  # Varkala, Kerala
+    {"name": "Palolem Beach", "latitude": 15.0131, "longitude": 74.0235},  # Palolem, Goa
+    {"name": "Radhanagar Beach", "latitude": 12.0120, "longitude": 92.9907},  # Havelock Island, Andaman and Nicobar
+    {"name": "Gokarna Beach", "latitude": 14.5502, "longitude": 74.3185},  # Gokarna, Karnataka
+    {"name": "Tarkarli Beach", "latitude": 16.0363, "longitude": 73.4702}   # Tarkarli, Maharashtra
 ]
+
 
 # Function to assess beach safety based on weather data with improved pointing system
 def assess_beach_safety(wave_height, wave_direction, wind_wave_height, wind_wave_direction, 
