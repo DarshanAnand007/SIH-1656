@@ -35,85 +35,108 @@ cache_session = requests_cache.CachedSession('.cache', expire_after=3600)
 retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
 openmeteo = openmeteo_requests.Client(session=retry_session)
 
-# List of beaches with their coordinates (latitude, longitude)
 beaches = [
-    {"name": "Marina Beach", "latitude": 13.0500, "longitude": 80.2824},
-    {"name": "Kovalam Beach", "latitude": 8.3772, "longitude": 76.9460},
-    {"name": "Calangute Beach", "latitude": 15.5445, "longitude": 73.7553}
+    {"name": "Marina Beach", "latitude": 13.0500, "longitude": 80.2824},  # Chennai, Tamil Nadu
+    {"name": "Kovalam Beach", "latitude": 8.3772, "longitude": 76.9460},  # Kovalam, Kerala
+    {"name": "Calangute Beach", "latitude": 15.5445, "longitude": 73.7553},  # Calangute, Goa
+    {"name": "Rushikonda Beach", "latitude": 17.7696, "longitude": 83.3858},  # Visakhapatnam, Andhra Pradesh
+    {"name": "Baga Beach", "latitude": 15.5526, "longitude": 73.7672},  # Baga, Goa
+    {"name": "Varkala Beach", "latitude": 8.7379, "longitude": 76.7010},  # Varkala, Kerala
+    {"name": "Palolem Beach", "latitude": 15.0131, "longitude": 74.0235},  # Palolem, Goa
+    {"name": "Radhanagar Beach", "latitude": 12.0120, "longitude": 92.9907},  # Havelock Island, Andaman and Nicobar
+    {"name": "Om Beach", "latitude": 14.5230, "longitude": 74.3184},  # Om Beach, Gokarna, Karnataka
+    {"name": "Tarkarli Beach", "latitude": 16.0363, "longitude": 73.4702}   # Tarkarli, Maharashtra
 ]
 
-# Function to assess beach safety based on weather data with improved pointing system
-def assess_beach_safety(wave_height, wave_direction, wind_wave_height, wind_wave_direction, 
-                        swell_wave_height=None, swell_wave_direction=None, 
-                        ocean_current_velocity=None, ocean_current_direction=None,
-                        wave_height_max=None, wind_wave_height_max=None):
-    # Define threshold values for safety
-    safe_wave_height = 1.5  # in meters, considered safe if below this value
-    safe_wind_wave_height = 1.5  # in meters, considered safe if below this value
-    high_wind_wave_height_threshold = 5.0  # Wind wave height above this value should lower safety significantly
-    very_high_wind_wave_height_threshold = 7.0  # Extremely high wind wave height
-    safe_ocean_current_velocity = 1.0  # in meters per second, considered safe if below this value
-    safe_wave_height_max = 1.7  # Maximum wave height considered safe
-    safe_wind_wave_height_max = 1.0  # Maximum wind wave height considered safe
-
-    # Weights for different parameters to adjust impact on safety score
-    wave_weight = 1.5
-    wind_wave_weight = 1.2
-    current_weight = 1.3
-
-    # Initialize safety score and reason
+# Updated Point System Algorithm with Reasons for Both Safe and Unsafe Conditions
+def assess_beach_safety(wave_height, wind_wave_height, ocean_current_velocity, 
+                           wave_height_max=None, wind_wave_height_max=None):
+    
+    # Define thresholds for each parameter
+    thresholds = {
+        "safe_wave_height": 1.5,
+        "moderate_wave_height": 3.0,
+        "safe_wind_wave_height": 1.5,
+        "moderate_wind_wave_height": 3.0,
+        "safe_ocean_current_velocity": 1.0,
+        "moderate_ocean_current_velocity": 2.0,
+        "safe_wave_height_max": 1.7,
+        "moderate_wave_height_max": 3.0
+    }
+    
+    # Start with a perfect score of 10
     safety_score = 10
-    reason = []
-    
-    # Check current wave height
-    if wave_height and wave_height > safe_wave_height:
-        penalty = min((wave_height - safe_wave_height) * wave_weight, 5)
-        safety_score -= penalty
-        reason.append(f"Wave height is {wave_height:.2f} meters, which exceeds the safe limit by {wave_height - safe_wave_height:.2f} meters.")
-    
-    # Check wind wave height
-    if wind_wave_height and wind_wave_height > safe_wind_wave_height:
-        if wind_wave_height > very_high_wind_wave_height_threshold:
-            penalty = 5  # Strong penalty for very high wind wave height
-            safety_score -= penalty
-            reason.append(f"Wind wave height is {wind_wave_height:.2f} meters, which is extremely high and dangerous.")
-        elif wind_wave_height > high_wind_wave_height_threshold:
-            penalty = 4  # Strong penalty for high wind wave height
-            safety_score -= penalty
-            reason.append(f"Wind wave height is {wind_wave_height:.2f} meters, which is higher than the safe limit.")
+    reason = []  # Reasons for the beach safety status
+    unsafe_reason = []  # Collect reasons if the beach is unsafe
+    safe_reason = []  # Collect reasons if the beach is safe
+
+    # Deduct points for wave height
+    if wave_height:
+        if wave_height > thresholds["moderate_wave_height"]:
+            safety_score -= 4  # High risk, strong deduction
+            reason.append(f"Wave height is {wave_height:.2f} meters, which is highly dangerous.")
+            unsafe_reason.append("The wave height is too high, increasing the risk of dangerous currents and strong waves.")
+        elif wave_height > thresholds["safe_wave_height"]:
+            safety_score -= 2  # Moderate risk
+            reason.append(f"Wave height is {wave_height:.2f} meters, exceeding the safe limit by {wave_height - thresholds['safe_wave_height']:.2f} meters.")
+            unsafe_reason.append("The wave height exceeds safe limits, which may pose a risk.")
         else:
-            penalty = (wind_wave_height - safe_wind_wave_height) * wind_wave_weight
-            safety_score -= penalty
-            reason.append(f"Wind wave height is {wind_wave_height:.2f} meters, which is higher than the safe limit.")
-    
-    # Check ocean current velocity, if available
-    if ocean_current_velocity and ocean_current_velocity > safe_ocean_current_velocity:
-        penalty = (ocean_current_velocity - safe_ocean_current_velocity) * current_weight
-        safety_score -= penalty
-        reason.append(f"Ocean current velocity is {ocean_current_velocity:.2f} m/s, which exceeds the safe limit by {ocean_current_velocity - safe_ocean_current_velocity:.2f} m/s.")
-    
-    # Check daily max wave height, if available
-    if wave_height_max and wave_height_max > safe_wave_height_max:
-        penalty = min((wave_height_max - safe_wave_height_max) * wave_weight, 2)
-        safety_score -= penalty
-        reason.append(f"Maximum daily wave height is {wave_height_max:.2f} meters, which is above the safe limit.")
-    
-    # Check daily max wind wave height, if available
-    if wind_wave_height_max and wind_wave_height_max > safe_wind_wave_height_max:
-        penalty = min((wind_wave_height_max - safe_wind_wave_height_max) * wind_wave_weight, 2)
-        safety_score -= penalty
-        reason.append(f"Maximum daily wind wave height is {wind_wave_height_max:.2f} meters, which is above the safe limit.")
-    
-    # Compile safety message
+            safe_reason.append(f"Wave height is {wave_height:.2f} meters, which is within the safe limit.")
+
+    # Deduct points for wind wave height
+    if wind_wave_height:
+        if wind_wave_height > thresholds["moderate_wind_wave_height"]:
+            safety_score -= 4  # High risk, strong deduction
+            reason.append(f"Wind wave height is {wind_wave_height:.2f} meters, which is highly dangerous.")
+            unsafe_reason.append("The wind wave height is too high, making the conditions unstable and hazardous.")
+        elif wind_wave_height > thresholds["safe_wind_wave_height"]:
+            safety_score -= 2  # Moderate risk
+            reason.append(f"Wind wave height is {wind_wave_height:.2f} meters, exceeding the safe limit by {wind_wave_height - thresholds['safe_wind_wave_height']:.2f} meters.")
+            unsafe_reason.append("The wind wave height exceeds safe limits, posing a moderate risk.")
+        else:
+            safe_reason.append(f"Wind wave height is {wind_wave_height:.2f} meters, which is within the safe limit.")
+
+    # Deduct points for ocean current velocity
+    if ocean_current_velocity:
+        if ocean_current_velocity > thresholds["moderate_ocean_current_velocity"]:
+            safety_score -= 3  # High risk
+            reason.append(f"Ocean current velocity is {ocean_current_velocity:.2f} m/s, which is highly dangerous.")
+            unsafe_reason.append("The ocean current velocity is too strong, increasing the risk of being swept away.")
+        elif ocean_current_velocity > thresholds["safe_ocean_current_velocity"]:
+            safety_score -= 1.5  # Moderate risk
+            reason.append(f"Ocean current velocity is {ocean_current_velocity:.2f} m/s, exceeding the safe limit by {ocean_current_velocity - thresholds['safe_ocean_current_velocity']:.2f} m/s.")
+            unsafe_reason.append("The ocean current velocity exceeds the safe limits, posing a moderate risk.")
+        else:
+            safe_reason.append(f"Ocean current velocity is {ocean_current_velocity:.2f} m/s, which is within the safe limit.")
+
+    # Deduct points for max wave height
+    if wave_height_max:
+        if wave_height_max > thresholds["moderate_wave_height_max"]:
+            safety_score -= 2  # High risk, but less frequent
+            reason.append(f"Maximum daily wave height is {wave_height_max:.2f} meters, which is highly dangerous.")
+            unsafe_reason.append("The maximum wave height for the day is very high, increasing the potential danger.")
+        elif wave_height_max > thresholds["safe_wave_height_max"]:
+            safety_score -= 1  # Moderate risk
+            reason.append(f"Maximum daily wave height is {wave_height_max:.2f} meters, exceeding the safe limit by {wave_height_max - thresholds['safe_wave_height_max']:.2f} meters.")
+            unsafe_reason.append("The maximum wave height exceeds safe limits, which may pose a moderate risk.")
+        else:
+            safe_reason.append(f"Maximum daily wave height is {wave_height_max:.2f} meters, which is within the safe limit.")
+
+    # Ensure score stays within valid range (0-10)
+    safety_score = max(min(safety_score, 10), 0)
+
+    # Assign safety message based on the score
     if safety_score >= 8:
         safety_message = "Safe"
         reason.insert(0, "The beach is safe based on current weather conditions.")
+        reason.extend(safe_reason)
     elif safety_score >= 5:
-        safety_message = "Moderately safe"
+        safety_message = "Moderately safe, caution advised."
         reason.insert(0, "The beach is moderately safe, but caution is advised.")
     else:
         safety_message = "Unsafe"
         reason.insert(0, "The beach is unsafe based on current weather conditions.")
+        reason.extend(unsafe_reason)
     
     # Return the result
     return {
@@ -121,7 +144,7 @@ def assess_beach_safety(wave_height, wave_direction, wind_wave_height, wind_wave
         "safety_score": safety_score,
         "reasons": reason
     }
-    
+
 # Function to safely extract variables from the Open-Meteo API response
 def safe_get_variable(response, index):
     try:
@@ -172,8 +195,7 @@ def fetch_and_store_weather_data_for_beach(beach):
 
     # Assess beach safety based on the weather data
     safety_report = assess_beach_safety(
-        wave_height=wave_height, wave_direction=wave_direction, 
-        wind_wave_height=wind_wave_height, wind_wave_direction=wind_wave_direction,
+        wave_height=wave_height, wind_wave_height=wind_wave_height, 
         ocean_current_velocity=ocean_current_velocity, wave_height_max=wave_height_max, 
         wind_wave_height_max=wind_wave_height_max
     )
