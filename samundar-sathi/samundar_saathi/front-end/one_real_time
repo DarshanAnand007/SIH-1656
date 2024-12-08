@@ -1,0 +1,70 @@
+import json
+import requests
+
+# Firebase Realtime Database URL
+FIREBASE_URL = "https://samundar-sathi-default-rtdb.firebaseio.com/"  # Replace with your Realtime Database URL
+
+# Function to write data to Firebase Realtime Database
+def write_data_to_realtime_db(data, path="beaches"):
+    url = f"{FIREBASE_URL}{path}.json"  # Removed ?auth={FIREBASE_AUTH}
+    response = requests.put(url, json=data)
+    if response.status_code == 200:
+        print("Data successfully written to Realtime Database.")
+    else:
+        print(f"Failed to write data: {response.status_code} - {response.text}")
+
+# Function to retrieve data from Firebase Realtime Database
+def retrieve_data_from_realtime_db(path="beaches"):
+    url = f"{FIREBASE_URL}{path}.json"  # Removed ?auth={FIREBASE_AUTH}
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        
+        print("\n--- Beach Weather and Safety Data ---")
+        
+        # Check if the retrieved data is structured as expected
+        if isinstance(data, dict):
+            for key, value in data.items():
+                if isinstance(value, dict):  # Ensure value is a dictionary
+                    print(f"\nBeach Name: {value.get('name')}")
+                    print(f"Location: ({value.get('latitude')}, {value.get('longitude')})")
+                    print("Safety Report:")
+                    print(f"  Safety Message: {value.get('safety_report', {}).get('safety_message')}")
+                    print(f"  Safety Score: {value.get('safety_report', {}).get('safety_score')}")
+                    
+                    # Print only the first safety reason if available
+                    reasons = value.get('safety_report', {}).get('reasons', [])
+                    if reasons:
+                        print(f"  Reason: {reasons[0]}")
+                    else:
+                        print("  No safety reasons available.")
+                    
+                    print(f"Timestamp: {value.get('timestamp')}")
+                    print("\n-----------------------------------")
+                else:
+                    print(f"Unexpected data format for key '{key}': {value}")
+        else:
+            print("Data retrieved is not a dictionary:", data)
+
+    else:
+        print(f"Failed to retrieve data: {response.status_code} - {response.text}")
+
+# Sample data for multiple beaches
+beaches_data = {
+    #"Marina Beach": {"name": "Marina Beach", "latitude": 13.0500, "longitude": 80.2824, "safety_report": {"safety_message": "Safe", "safety_score": 8, "reasons": ["Wave height within safe limits"]}, "timestamp": "2023-11-01T10:30:00Z"},
+    #"Kovalam Beach": {"name": "Kovalam Beach", "latitude": 8.3772, "longitude": 76.9460, "safety_report": {"safety_message": "Moderate", "safety_score": 6, "reasons": ["Occasional strong currents"]}, "timestamp": "2023-11-01T11:00:00Z"},
+    #"Calangute Beach": {"name": "Calangute Beach", "latitude": 15.5445, "longitude": 73.7553, "safety_report": {"safety_message": "Safe", "safety_score": 7, "reasons": ["Crowd control measures in place"]}, "timestamp": "2023-11-01T11:15:00Z"},
+    "Rushikonda Beach": {"name": "Rushikonda Beach", "latitude": 17.7696, "longitude": 83.3858, "safety_report": {"safety_message": "Safe", "safety_score": 9, "reasons": ["Clean water and patrolling"]}, "timestamp": "2023-11-01T12:00:00Z"},
+    #"Baga Beach": {"name": "Baga Beach", "latitude": 15.5526, "longitude": 73.7672, "safety_report": {"safety_message": "Safe", "safety_score": 7, "reasons": ["Lifeguard presence"]}, "timestamp": "2023-11-01T12:30:00Z"},
+    #"Varkala Beach": {"name": "Varkala Beach", "latitude": 8.7379, "longitude": 76.7010, "safety_report": {"safety_message": "Safe", "safety_score": 8, "reasons": ["Moderate waves and clean surroundings"]}, "timestamp": "2023-11-01T13:00:00Z"},
+    #"Palolem Beach": {"name": "Palolem Beach", "latitude": 15.0131, "longitude": 74.0235, "safety_report": {"safety_message": "Safe", "safety_score": 9, "reasons": ["Calm waters and regular patrols"]}, "timestamp": "2023-11-01T13:30:00Z"},
+    #"Radhanagar Beach": {"name": "Radhanagar Beach", "latitude": 12.0120, "longitude": 92.9907, "safety_report": {"safety_message": "Safe", "safety_score": 10, "reasons": ["Pristine environment and clear water"]}, "timestamp": "2023-11-01T14:00:00Z"},
+    #"Om Beach": {"name": "Om Beach", "latitude": 14.5230, "longitude": 74.3184, "safety_report": {"safety_message": "Moderate", "safety_score": 7, "reasons": ["Occasional tides"]}, "timestamp": "2023-11-01T14:30:00Z"},
+    #"Tarkarli Beach": {"name": "Tarkarli Beach", "latitude": 16.0363, "longitude": 73.4702, "safety_report": {"safety_message": "Safe", "safety_score": 8, "reasons": ["Well-maintained and lifeguard presence"]}, "timestamp": "2023-11-01T15:00:00Z"}
+}
+
+# Write data to Firebase Realtime Database
+write_data_to_realtime_db(beaches_data)
+
+# Retrieve and display data from Firebase Realtime Database
+retrieve_data_from_realtime_db()
