@@ -21,7 +21,9 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    _checkUserLoggedIn();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkUserLoggedIn();
+    });
   }
 
   @override
@@ -141,7 +143,8 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   // Method to handle sign-up
-  Future<void> _signUpUser(String username, String email, String password) async {
+  Future<void> _signUpUser(
+      String username, String email, String password) async {
     setState(() {
       _isLoading = true;
       _errorMessage = '';
@@ -164,7 +167,8 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       // Create the user in Firebase Auth
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+      UserCredential userCredential =
+          await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -266,7 +270,8 @@ class _LoginPageState extends State<LoginPage> {
                             const SizedBox(height: 16.0),
                             TextButton(
                               onPressed: _showSignUpDialog,
-                              child: const Text('Don\'t have an account? Sign Up'),
+                              child:
+                                  const Text('Don\'t have an account? Sign Up'),
                             ),
                           ],
                         ),

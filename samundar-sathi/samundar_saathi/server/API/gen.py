@@ -7,6 +7,9 @@ import json
 import firebase_admin
 from firebase_admin import credentials, firestore
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Firebase credentials
 firebase_credentials = {
@@ -19,7 +22,7 @@ firebase_credentials = {
     "auth_uri": os.getenv("FIREBASE_AUTH_URI"),
     "token_uri": os.getenv("FIREBASE_TOKEN_URI"),
     "auth_provider_x509_cert_url": os.getenv("FIREBASE_AUTH_PROVIDER_CERT_URL"),
-    "client_x509_cert_url": os.getenv("FIREBASE_CLIENT_CERT_URL")
+    "client_x509_cert_url": os.getenv("FIREBASE_CLIENT_CERT_URL"),
 }
 
 if not firebase_admin._apps:
@@ -45,32 +48,93 @@ params = {
     "start_date": start_date,
     "end_date": end_date,
     "hourly": [
-        "temperature_2m", "relative_humidity_2m", "dew_point_2m", "apparent_temperature",
-        "precipitation_probability", "precipitation", "rain", "showers", "snowfall", "snow_depth",
-        "weather_code", "pressure_msl", "surface_pressure", "cloud_cover", "cloud_cover_low",
-        "cloud_cover_mid", "cloud_cover_high", "visibility", "evapotranspiration", "et0_fao_evapotranspiration",
-        "vapour_pressure_deficit", "wind_speed_10m", "wind_speed_80m", "wind_speed_120m", "wind_speed_180m",
-        "wind_direction_10m", "wind_direction_80m", "wind_direction_120m", "wind_direction_180m",
-        "wind_gusts_10m", "temperature_80m", "temperature_120m", "temperature_180m", "soil_temperature_0cm",
-        "soil_temperature_6cm", "soil_temperature_18cm", "soil_temperature_54cm", "soil_moisture_0_to_1cm",
-        "soil_moisture_1_to_3cm", "soil_moisture_3_to_9cm", "soil_moisture_9_to_27cm", "soil_moisture_27_to_81cm",
-        "uv_index", "uv_index_clear_sky", "is_day", "sunshine_duration", "wet_bulb_temperature_2m",
-        "total_column_integrated_water_vapour", "cape", "lifted_index", "convective_inhibition",
-        "freezing_level_height", "boundary_layer_height", "hail"
+        "temperature_2m",
+        "relative_humidity_2m",
+        "dew_point_2m",
+        "apparent_temperature",
+        "precipitation_probability",
+        "precipitation",
+        "rain",
+        "showers",
+        "snowfall",
+        "snow_depth",
+        "weather_code",
+        "pressure_msl",
+        "surface_pressure",
+        "cloud_cover",
+        "cloud_cover_low",
+        "cloud_cover_mid",
+        "cloud_cover_high",
+        "visibility",
+        "evapotranspiration",
+        "et0_fao_evapotranspiration",
+        "vapour_pressure_deficit",
+        "wind_speed_10m",
+        "wind_speed_80m",
+        "wind_speed_120m",
+        "wind_speed_180m",
+        "wind_direction_10m",
+        "wind_direction_80m",
+        "wind_direction_120m",
+        "wind_direction_180m",
+        "wind_gusts_10m",
+        "temperature_80m",
+        "temperature_120m",
+        "temperature_180m",
+        "soil_temperature_0cm",
+        "soil_temperature_6cm",
+        "soil_temperature_18cm",
+        "soil_temperature_54cm",
+        "soil_moisture_0_to_1cm",
+        "soil_moisture_1_to_3cm",
+        "soil_moisture_3_to_9cm",
+        "soil_moisture_9_to_27cm",
+        "soil_moisture_27_to_81cm",
+        "uv_index",
+        "uv_index_clear_sky",
+        "is_day",
+        "sunshine_duration",
+        "wet_bulb_temperature_2m",
+        "total_column_integrated_water_vapour",
+        "cape",
+        "lifted_index",
+        "convective_inhibition",
+        "freezing_level_height",
+        "boundary_layer_height",
+        "hail",
     ],
     "daily": [
-        "weather_code", "temperature_2m_max", "temperature_2m_min", "apparent_temperature_max", "apparent_temperature_min",
-        "sunrise", "sunset", "daylight_duration", "sunshine_duration", "uv_index_max", "uv_index_clear_sky_max",
-        "precipitation_sum", "rain_sum", "showers_sum", "snowfall_sum", "precipitation_hours",
-        "precipitation_probability_max", "wind_speed_10m_max", "wind_gusts_10m_max", "wind_direction_10m_dominant",
-        "shortwave_radiation_sum", "et0_fao_evapotranspiration"
+        "weather_code",
+        "temperature_2m_max",
+        "temperature_2m_min",
+        "apparent_temperature_max",
+        "apparent_temperature_min",
+        "sunrise",
+        "sunset",
+        "daylight_duration",
+        "sunshine_duration",
+        "uv_index_max",
+        "uv_index_clear_sky_max",
+        "precipitation_sum",
+        "rain_sum",
+        "showers_sum",
+        "snowfall_sum",
+        "precipitation_hours",
+        "precipitation_probability_max",
+        "wind_speed_10m_max",
+        "wind_gusts_10m_max",
+        "wind_direction_10m_dominant",
+        "shortwave_radiation_sum",
+        "et0_fao_evapotranspiration",
     ],
     "temporal_resolution": "native",
-    "models": "best_match"
+    "models": "best_match",
 }
 
 # Fetch weather data
-responses = openmeteo.weather_api("https://historical-forecast-api.open-meteo.com/v1/forecast", params=params)
+responses = openmeteo.weather_api(
+    "https://historical-forecast-api.open-meteo.com/v1/forecast", params=params
+)
 response = responses[0]
 
 # Process Hourly Data
@@ -80,7 +144,7 @@ hourly_data = {
         start=pd.to_datetime(hourly.Time(), unit="s", utc=True),
         end=pd.to_datetime(hourly.TimeEnd(), unit="s", utc=True),
         freq=pd.Timedelta(seconds=hourly.Interval()),
-        inclusive="left"
+        inclusive="left",
     )
 }
 
@@ -96,7 +160,7 @@ daily_data = {
         start=pd.to_datetime(daily.Time(), unit="s", utc=True),
         end=pd.to_datetime(daily.TimeEnd(), unit="s", utc=True),
         freq=pd.Timedelta(seconds=daily.Interval()),
-        inclusive="left"
+        inclusive="left",
     )
 }
 
@@ -106,54 +170,86 @@ for i, var_name in enumerate(params["daily"]):
 daily_df = pd.DataFrame(data=daily_data)
 
 # Convert data to JSON
-hourly_json = hourly_df.to_json(orient='records', date_format='iso')
-daily_json = daily_df.to_json(orient='records', date_format='iso')
+hourly_json = hourly_df.to_json(orient="records", date_format="iso")
+daily_json = daily_df.to_json(orient="records", date_format="iso")
 
 # Expanded Activities List
 activities = {
     "Water-Based Activities": [
-        "Swimming", "Snorkeling", "Surfing", "Paddleboarding", "Jet Skiing", 
-        "Parasailing", "Scuba Diving", "Boating/Kayaking", "Fishing", 
-        "Bodyboarding", "Kite Surfing", "Wave Watching"
+        "Swimming",
+        "Snorkeling",
+        "Surfing",
+        "Paddleboarding",
+        "Jet Skiing",
+        "Parasailing",
+        "Scuba Diving",
+        "Boating/Kayaking",
+        "Fishing",
+        "Bodyboarding",
+        "Kite Surfing",
+        "Wave Watching",
     ],
     "Relaxation and Wellness": [
-        "Sunbathing", "Reading", "Meditation", "Beach Yoga", "Picnicking", 
-        "Stargazing", "Massage"
+        "Sunbathing",
+        "Reading",
+        "Meditation",
+        "Beach Yoga",
+        "Picnicking",
+        "Stargazing",
+        "Massage",
     ],
     "Family-Friendly Activities": [
-        "Building Sandcastles", "Beachcombing", "Playing Frisbee", 
-        "Beach Volleyball", "Flying Kites", "Paddle Ball", "Treasure Hunts"
+        "Building Sandcastles",
+        "Beachcombing",
+        "Playing Frisbee",
+        "Beach Volleyball",
+        "Flying Kites",
+        "Paddle Ball",
+        "Treasure Hunts",
     ],
     "Fitness and Sports": [
-        "Running/Jogging", "Beach Football/Soccer", "Beach Cricket", 
-        "Yoga and Pilates", "Sand Workouts", "Cycling"
+        "Running/Jogging",
+        "Beach Football/Soccer",
+        "Beach Cricket",
+        "Yoga and Pilates",
+        "Sand Workouts",
+        "Cycling",
     ],
     "Adventure and Exploration": [
-        "Hiking", "Rock Climbing", "Tide Pooling", "Wildlife Watching", 
-        "Photography"
+        "Hiking",
+        "Rock Climbing",
+        "Tide Pooling",
+        "Wildlife Watching",
+        "Photography",
     ],
     "Social and Leisure Activities": [
-        "Barbecuing", "Camping", "Bonfires", "Dancing", "Music Jam", 
-        "Beach Parties"
+        "Barbecuing",
+        "Camping",
+        "Bonfires",
+        "Dancing",
+        "Music Jam",
+        "Beach Parties",
     ],
     "Cultural and Eco Activities": [
-        "Art and Sand Sculptures", "Eco-Cleanups", "Educational Tours", 
-        "Local Markets"
+        "Art and Sand Sculptures",
+        "Eco-Cleanups",
+        "Educational Tours",
+        "Local Markets",
     ],
     "Romantic Activities": [
-        "Watching Sunsets/Sunrises", "Dining by the Shore", 
-        "Walking Along the Beach", "Boat Rides for Two"
+        "Watching Sunsets/Sunrises",
+        "Dining by the Shore",
+        "Walking Along the Beach",
+        "Boat Rides for Two",
     ],
     "Extreme Sports (for Thrill Seekers)": [
-        "Windsurfing", "Paragliding", "Underwater Scooter Riding", 
-        "Water Skiing"
+        "Windsurfing",
+        "Paragliding",
+        "Underwater Scooter Riding",
+        "Water Skiing",
     ],
-    "Food and Drinks": [
-        "Beach Cafés", "Seafood Sampling", "Ice Cream Stands"
-    ],
-    "Seasonal Activities": [
-        "Whale Watching", "Festivals", "Sand Art Competitions"
-    ]
+    "Food and Drinks": ["Beach Cafés", "Seafood Sampling", "Ice Cream Stands"],
+    "Seasonal Activities": ["Whale Watching", "Festivals", "Sand Art Competitions"],
 }
 
 # Gemini AI configuration and input preparation
@@ -165,7 +261,7 @@ model = genai.GenerativeModel(
 analysis_input = {
     "weather_data": {
         "hourly": json.loads(hourly_json),
-        "daily": json.loads(daily_json)
+        "daily": json.loads(daily_json),
     },
     "activities": activities,
     "instructions": """Analyze the provided hourly weather data and suggest activities based on the following criteria:
@@ -184,11 +280,14 @@ analysis_input = {
            },
            ...
        ]
-   }"""
+   }""",
 }
 
 analysis_result = model.generate_content(json.dumps(analysis_input))
-analysis_result_dict = json.loads(analysis_result)
+print(analysis_result)
+analysis_result_dict = json.loads(analysis_result.text)
+print(analysis_result_dict)
+
 
 # Save results to Firebase
 def save_analysis_to_firebase(collection_name, data):
@@ -198,5 +297,6 @@ def save_analysis_to_firebase(collection_name, data):
         print(f"Data saved successfully in collection '{collection_name}'!")
     except Exception as e:
         print(f"Error saving data to Firebase: {e}")
+
 
 save_analysis_to_firebase("active", analysis_result_dict)
